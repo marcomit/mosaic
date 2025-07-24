@@ -38,7 +38,7 @@ class InternalRouter with Loggable {
     if (!moduleManager.actives.containsKey(_history.last.name)) return;
     info('current module ${_history.last.name}');
     events.emit<String>(
-      ['router', 'change', _history.last.name].join(Events.SEP),
+      ['router', 'change', _history.last.name].join(Events.sep),
       '',
     );
     // events.router.change.id(_history.last.name).emit<String>('');

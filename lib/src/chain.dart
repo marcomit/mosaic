@@ -7,7 +7,7 @@ abstract class Segment {
   Segment(this.topic);
 
   Segment $(String data) {
-    if (topic.isNotEmpty) topic += Events.SEP;
+    if (topic.isNotEmpty) topic += Events.sep;
     topic += data;
     return this;
   }
@@ -35,7 +35,7 @@ mixin Id on Segment {
 
 mixin Param on Segment {
   Segment params(List<String> params) {
-    topic = [topic, ...params].join(Events.SEP);
+    topic = [topic, ...params].join(Events.sep);
     return this;
   }
 }

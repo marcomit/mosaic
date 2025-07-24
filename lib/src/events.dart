@@ -66,7 +66,7 @@ typedef EventCallback<T> = void Function(EventContext<T>);
 /// Usa un singleton accessibile tramite [events].
 class Events {
   /// Separatore dei segmenti del canale (default: `/`).
-  static String SEP = "/";
+  static String sep = "/";
 
   static final _instance = Events._internal();
 
@@ -81,10 +81,10 @@ class Events {
   /// Il canale può contenere `*` per un segmento jolly o `#` per tutti i segmenti restanti.
   /// Il callback riceverà un [EventContext] al momento dell'emit.
   EventListener<T> on<T>(String channel, EventCallback<T> callback) {
-    final listener = EventListener<T>(channel.split(SEP), callback);
+    final listener = EventListener<T>(channel.split(sep), callback);
 
     for (final route in _retained.keys) {
-      final path = route.split(SEP);
+      final path = route.split(sep);
 
       if (!listener._verify(path)) continue;
 
@@ -104,7 +104,7 @@ class Events {
   /// - [data]: valore opzionale da passare al contesto.
   /// - [retain]: parametro attualmente ignorato, riservato per futura gestione eventi persistenti.
   void emit<T>(String channel, [T? data, bool retain = false]) {
-    final path = channel.split(SEP);
+    final path = channel.split(sep);
     logger.info("Emitting on $path ${retain ? "retained" : ""}", ['events']);
     EventContext<T> context;
 

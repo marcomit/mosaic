@@ -44,7 +44,7 @@ abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
 
   /// Get the string for listening events
   String _topic(String action) {
-    return [..._baseTopic, action].join(Events.SEP);
+    return [..._baseTopic, action].join(Events.sep);
   }
 
   /// Constructor (only need to define a static string [id])
