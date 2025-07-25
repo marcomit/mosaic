@@ -46,7 +46,7 @@ class InternalQueueNode<T> {
 }
 
 class InternalAutoQueue {
-  static const int MAX_RETRIES = 1;
+  static const int maxRetries = 1;
   bool _isDequeuing = false;
   final Queue<InternalQueueNode> _queue = Queue();
 
@@ -66,7 +66,7 @@ class InternalAutoQueue {
   }
 
   Future<void> _dequeue() async {
-    for (int i = 0; i < MAX_RETRIES; i++) {
+    for (int i = 0; i < maxRetries; i++) {
       try {
         final first = _queue.first;
         final result = await first.action();
