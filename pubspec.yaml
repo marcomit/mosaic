@@ -9,6 +9,9 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  args: ^2.7.0
+  flutter:
+    sdk: flutter
   yaml_edit: ^2.2.2
   # path: ^1.8.0
 
@@ -16,7 +19,7 @@ executables:
   mosaic: bin
 
 dev_dependencies:
-  lints: ^5.0.0
+  lints: ^6.0.0
   test: ^1.24.0
 
 optional-dependencies:

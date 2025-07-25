@@ -59,12 +59,12 @@ class InternalRouter with Loggable {
 
   void pop<T>([T? value]) => _current.pop(value);
 
-  goto(ModuleEnum moduleName) {
+  void goto(ModuleEnum moduleName) {
     _history.add(moduleName);
     _goto();
   }
 
-  _goto() {
+  void _goto() {
     if (_history.isEmpty) return;
     if (!moduleManager.actives.containsKey(_history.last.name)) return;
     info('current module ${_history.last.name}');
@@ -75,7 +75,7 @@ class InternalRouter with Loggable {
     // events.router.change.id(_history.last.name).emit<String>('');
   }
 
-  goBack() {
+  void goBack() {
     if (_history.isEmpty) {
       throw Exception(
         "Stai provando a tornare indietro quando lo stack e' vuoto",
@@ -87,7 +87,7 @@ class InternalRouter with Loggable {
     _goto();
   }
 
-  clear() {
+  void clear() {
     info("Clearing the module ${_current.name}");
     _current.clear();
   }

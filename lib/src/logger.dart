@@ -202,11 +202,11 @@ class LoggerWrapper {
     return message;
   }
 
-  addWrapper(LoggerWrapperCallback callback) {
+  void addWrapper(LoggerWrapperCallback callback) {
     _wrappers.add(callback);
   }
 
-  removeWrapper() {
+  void removeWrapper() {
     if (_wrappers.isNotEmpty) _wrappers.removeLast();
   }
 }
@@ -216,12 +216,12 @@ mixin Loggable {
   /// This field can be overrided such that by default uses those tags to log
   final List<String> loggerTags = [];
 
-  log(
+  Future<void> log(
     String message, {
     LogType type = LogType.info,
     List<String> tags = const [],
-  }) {
-    logger.log(message, type: type, tags: [...loggerTags, ...tags]);
+  }) async {
+    await logger.log(message, type: type, tags: [...loggerTags, ...tags]);
   }
 
   Future<void> debug(String message, [List<String> tags = const []]) async {

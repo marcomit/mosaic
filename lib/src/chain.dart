@@ -61,7 +61,7 @@ abstract class Segment {
 }
 
 mixin Id on Segment {
-  id(String param) => $(param);
+  Segment id(String param) => $(param);
 }
 
 mixin Param on Segment {
