@@ -32,7 +32,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:flutter/foundation.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 
 const String moduleEnv = 'config.json';
@@ -47,7 +46,7 @@ class _Module {
   bool _checkDependencies() {
     final res = dependsOn(name);
     if (res) {
-      debugPrint("Invalid dependency: It cannot depend on itself");
+      print("Invalid dependency: It cannot depend on itself");
       exit(1);
     }
     return res;
@@ -103,7 +102,7 @@ class _ModuleManager {
     for (final m in modules) {
       if (!m.active) continue;
       if (m.dependsOn(name)) {
-        debugPrint(
+        print(
           "$name cannot be removed or disabled becase it depends on ${m.name}",
         );
         res = false;
@@ -216,16 +215,16 @@ Future<void> build() async {
 
   try {
     final bootstrap = await Process.run("melos", ["bootstrap"]);
-    debugPrint(bootstrap.stdout.toString());
+    print(bootstrap.stdout.toString());
   } catch (err) {
-    debugPrint("Trying to call 'melos bootstrab' but an error occured");
+    print("Trying to call 'melos bootstrab' but an error occured");
   }
 }
 
 Future<_ModuleManager> _loadModules() async {
   final file = File(moduleEnv);
   if (!await file.exists()) {
-    debugPrint("$moduleEnv not found");
+    print("$moduleEnv not found");
     exit(1);
   }
   dynamic json = await file.readAsString();
@@ -248,18 +247,18 @@ Future<void> enable(ArgResults? res) async => _setModule(res, true);
 
 Future<void> disable(ArgResults? res) async {
   if (res == null) {
-    debugPrint("Required module name is missing");
+    print("Required module name is missing");
     return;
   }
   final manager = await _loadModules();
   final name = res.arguments.last;
   final module = manager.get(name);
   if (module == null) {
-    debugPrint("Module not found");
+    print("Module not found");
     return;
   }
   if (!manager.dependsOn(name)) {
-    debugPrint(
+    print(
       "You cannot disable this module because there are some modules that depend on this",
     );
     return;
@@ -269,7 +268,7 @@ Future<void> disable(ArgResults? res) async {
 
 Future<void> addModule(ArgResults? res) async {
   if (res == null) {
-    debugPrint("res nullo");
+    print("res nullo");
     return;
   }
   final name = res.arguments.last;
@@ -290,13 +289,13 @@ Future<void> addModule(ArgResults? res) async {
 
 Future<void> setDefault(ArgResults? res) async {
   if (res == null) {
-    debugPrint("res nullo");
+    print("res nullo");
     return;
   }
   final name = res.arguments.last;
   final manager = await _loadModules();
   if (manager.get(name) == null) {
-    debugPrint("There's no module $name in the module list");
+    print("There's no module $name in the module list");
     return;
   }
   manager.defaultModule = name;
@@ -307,7 +306,7 @@ Future<void> setDefault(ArgResults? res) async {
 Future<void> listModules(ArgResults? res) async {
   final list = await _loadModules();
   bool curr;
-  debugPrint("The possible modules are:");
+  print("The possible modules are:");
   for (int i = 0; i < list.modules.length; i++) {
     final module = list.modules[i];
     String desc = "";
@@ -316,7 +315,7 @@ Future<void> listModules(ArgResults? res) async {
     }
 
     curr = (module.name == list.defaultModule);
-    debugPrint(
+    print(
       "$i) ${curr ? "*" : " "}${module.name.padRight(20)}${module.active ? "enabled " : "disabled"} $desc",
     );
   }
@@ -324,7 +323,7 @@ Future<void> listModules(ArgResults? res) async {
 
 Future<void> removeModule(ArgResults? res) async {
   if (res == null) {
-    debugPrint("res nullo");
+    print("res nullo");
   }
   final name = res!.arguments.last;
   final manager = await _loadModules();
