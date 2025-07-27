@@ -28,22 +28,14 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-library;
 
-export 'src/events/chain.dart';
-export 'src/events/events.dart';
-export 'src/logger/logger.dart';
-export 'src/logger/logger_wrapper.dart';
-export 'src/logger/logger_dispatcher.dart';
-export 'src/signal/signal.dart';
-export 'src/signal/list_signal.dart';
-export 'src/signal/shared_state.dart';
-export 'src/modules/modules.dart';
-export 'src/modules/modular.dart';
-export 'src/modules/injector.dart';
-export 'src/modules/automodule.dart';
-export 'src/thread_safety/mutex.dart';
-export 'src/thread_safety/semaphore.dart';
-export 'src/thread_safety/autoqueue.dart';
-export 'src/dependency_injection/dependency_injector.dart';
-export 'exceptions.dart';
+import '../modules/modules.dart';
+
+class RouteContext<T> {
+  final Module? from;
+  final Module to;
+  final T? params;
+  final DateTime timestamp = DateTime.now();
+
+  RouteContext({this.from, required this.to, this.params});
+}

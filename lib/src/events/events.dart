@@ -371,14 +371,5 @@ class Events {
       'Events(listeners: ${_listeners.length}, retained: ${_retained.length})';
 }
 
-class EventException implements Exception {
-  final String message;
-
-  EventException(this.message);
-
-  @override
-  String toString() => "EventException: $message";
-}
-
 /// Global event manager instance.
 final events = Events._instance;

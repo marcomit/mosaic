@@ -29,6 +29,8 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+import '../../exceptions.dart';
+
 import '../events/events.dart';
 
 /// A reactive state container that notifies listeners when its value changes.
@@ -144,7 +146,11 @@ class Signal<T> {
   /// * [dispose] to remove all listeners
   void watch([void Function(T)? callback, Object? watcher]) {
     if (_disposed) {
-      throw SignalError("Called watch after the signal wad disposed.");
+      throw SignalException(
+        "Called watch after the signal wad disposed.",
+        cause: "Missing unwatch call",
+        fix: "Ensure you unwatch the signal on dispose",
+      );
     }
     watcher ??= Object();
 
@@ -660,13 +666,4 @@ class AsyncStatus<T> {
     if (success) return "AsyncStatus.success($data)";
     return "AsyncStatus.stale()";
   }
-}
-
-class SignalError implements Exception {
-  final String message;
-
-  SignalError(this.message);
-
-  @override
-  String toString() => "SignalError: $message";
 }

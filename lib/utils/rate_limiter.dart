@@ -28,22 +28,27 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-library;
 
-export 'src/events/chain.dart';
-export 'src/events/events.dart';
-export 'src/logger/logger.dart';
-export 'src/logger/logger_wrapper.dart';
-export 'src/logger/logger_dispatcher.dart';
-export 'src/signal/signal.dart';
-export 'src/signal/list_signal.dart';
-export 'src/signal/shared_state.dart';
-export 'src/modules/modules.dart';
-export 'src/modules/modular.dart';
-export 'src/modules/injector.dart';
-export 'src/modules/automodule.dart';
-export 'src/thread_safety/mutex.dart';
-export 'src/thread_safety/semaphore.dart';
-export 'src/thread_safety/autoqueue.dart';
-export 'src/dependency_injection/dependency_injector.dart';
-export 'exceptions.dart';
+class RateLimiter {
+  final List<DateTime> _timestamps = [];
+  final int maxRate;
+  final Duration window;
+
+  RateLimiter({this.maxRate = 1000, this.window = const Duration(seconds: 5)});
+
+  bool _excedeed() {
+    final now = DateTime.now();
+
+    _timestamps.removeWhere((t) => now.difference(t) > window);
+
+    if (_timestamps.length > maxRate) {
+      return true;
+    }
+    _timestamps.add(now);
+    return false;
+  }
+
+  bool excedeed() => _excedeed();
+
+  bool proceed() => !_excedeed();
+}

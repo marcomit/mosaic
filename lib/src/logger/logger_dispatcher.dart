@@ -40,6 +40,7 @@ import '../thread_safety/semaphore.dart';
 /// It is used by the Logger class when it dispatch a log.
 /// When the log function of logger is called it execute `secureCall` that it cannot be overrided.
 abstract class LoggerDispatcher {
+  bool _disposed = false;
   final String name;
   bool active = true;
 
@@ -60,6 +61,10 @@ abstract class LoggerDispatcher {
   }
 
   Future<void> log(String message, LogType type, List<String> tags);
+
+  Future<void> dispose() async {
+    if (_disposed) _disposed = true;
+  }
 }
 
 class ConsoleDispatcher extends LoggerDispatcher {
@@ -68,9 +73,12 @@ class ConsoleDispatcher extends LoggerDispatcher {
 
   @override
   Future<void> log(String message, LogType type, List<String> tags) async {
-    await _s.lock();
-    debugPrint(message);
-    _s.release();
+    try {
+      await _s.lock();
+      debugPrint(message);
+    } finally {
+      _s.release();
+    }
   }
 }
 
@@ -107,22 +115,24 @@ class FileLoggerDispatcher extends LoggerDispatcher {
   }
 
   Future<Mutex<File>> _createIfAbsent(String tag) async {
-    final files = await _files.lock();
-    if (files.containsKey(tag)) return files[tag]!;
-    final file = File([_path, fileNameRole(tag)].join('/'));
-    if (!await file.exists()) {
-      await file.create(recursive: true);
-    }
-    files[tag] = Mutex(file);
-    _files.release();
-    return files[tag]!;
+    return await _files.use((files) async {
+      if (files.containsKey(tag)) return files[tag]!;
+      try {
+        final file = File([_path, fileNameRole(tag)].join('/'));
+        if (!await file.exists()) {
+          await file.create(recursive: true);
+        }
+        files[tag] = Mutex(file);
+      } finally {}
+      return files[tag]!;
+    });
   }
 
   Future<void> _writeFile(String message, String tag) async {
     final mutex = await _createIfAbsent(tag);
-    final f = await mutex.lock();
 
     try {
+      final f = await mutex.lock();
       await f.writeAsString("$message\n", mode: FileMode.append);
     } finally {
       mutex.release();

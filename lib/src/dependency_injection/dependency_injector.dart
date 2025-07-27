@@ -30,8 +30,7 @@
 */
 
 import 'package:mosaic/src/logger/logger.dart';
-
-import 'dependency_exception.dart';
+import 'package:mosaic/utils/basic_exception.dart';
 
 final global = DependencyInjector();
 
@@ -68,7 +67,10 @@ class DependencyInjector {
   /// Throws [DependencyException] if the type [T] already exists.
   void _checkIfAbsent<T extends Object>(Map<Type, Function()> map) {
     if (!map.containsKey(T)) return;
-    throw DependencyException("Dependency $T already registered");
+    throw DependencyException(
+      "Dependency $T already registered",
+      fix: "If you want to replace consider the use of override<T>()",
+    );
   }
 
   /// Registers a singleton instance that will be returned every time [get] is called.
@@ -217,7 +219,8 @@ class DependencyInjector {
     }
 
     throw DependencyException(
-      "Dependency $T does not exists in this container. try to use put<$T>() before calling it.",
+      "Dependency $T does not exists in this container. ",
+      fix: "Try to use put<$T>() before calling it.",
     );
   }
 

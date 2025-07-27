@@ -94,7 +94,7 @@ class _ModuleManager {
     'modules': modules.map((m) => m.json).toList(),
   };
 
-  add(String name) => modules.add(_Module(name));
+  void add(String name) => modules.add(_Module(name));
 
   /// It checks if there are any modules that depends on it
   bool dependsOn(String name) {
@@ -111,7 +111,7 @@ class _ModuleManager {
     return res;
   }
 
-  remove(String name) => modules.removeWhere((m) => m.name == name);
+  void remove(String name) => modules.removeWhere((m) => m.name == name);
 
   Future<void> save(String name) async {
     final file = File(name);

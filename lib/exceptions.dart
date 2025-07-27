@@ -28,11 +28,67 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
-class DependencyException implements Exception {
+class MosaicException implements Exception {
+  String get name => "MosaicException";
   final String message;
-  DependencyException(this.message);
+  final String? cause;
+  final String? fix;
+
+  const MosaicException(this.message, {this.cause, this.fix});
+
+  Map<String, dynamic> _toJson() => {
+    'message': message,
+    if (cause != null) 'cause': cause,
+    if (fix != null) 'fix': fix,
+  };
 
   @override
-  String toString() => "DependencyException: $message";
+  String toString() => "$name ${_toJson()}";
+}
+
+class RouterException extends MosaicException {
+  @override
+  String get name => "RouterException";
+
+  RouterException(super.message, {super.cause, super.fix});
+}
+
+class SignalException extends MosaicException {
+  @override
+  String get name => "SignalException";
+
+  SignalException(super.message, {super.cause, super.fix});
+}
+
+/// Exception thrown when module operations fail.
+class ModuleException extends MosaicException {
+  @override
+  String get name => "ModuleException";
+
+  final String? moduleName;
+
+  ModuleException(super.message, {this.moduleName, super.cause, super.fix});
+
+  @override
+  String toString() => "$name ${moduleName ?? ""} ${_toJson()}";
+}
+
+class EventException extends MosaicException {
+  @override
+  String get name => "EventException";
+
+  EventException(super.message, {super.fix, super.cause});
+}
+
+class DependencyException extends MosaicException {
+  @override
+  String get name => "DependencyException";
+
+  DependencyException(super.message, {super.fix, super.cause});
+}
+
+class LoggerException extends MosaicException {
+  @override
+  String get name => "LoggerException";
+  LoggerException(super.message, {super.fix, super.cause});
 }
