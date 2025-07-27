@@ -28,21 +28,68 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-library;
+import 'package:flutter/widgets.dart';
+import 'signal.dart';
 
-export 'src/events/chain.dart';
-export 'src/events/events.dart';
-export 'src/logger/logger.dart';
-export 'src/logger/logger_wrapper.dart';
-export 'src/logger/logger_dispatcher.dart';
-export 'src/signal/signal.dart';
-export 'src/signal/list_signal.dart';
-export 'src/signal/shared_state.dart';
-export 'src/modules/router.dart';
-export 'src/modules/modules.dart';
-export 'src/modules/modular.dart';
-export 'src/modules/injector.dart';
-export 'src/modules/automodule.dart';
-export 'src/thread_safety/mutex.dart';
-export 'src/thread_safety/semaphore.dart';
-export 'src/thread_safety/autoqueue.dart';
+class CounterSignal extends Signal<int> {
+  CounterSignal(super._state);
+
+  void increment() => state++;
+  void decrement() => state--;
+  void reset() => state = 0;
+}
+
+final counter = CounterSignal(10);
+
+class Prova extends StatefulWidget {
+  const Prova({super.key});
+
+  @override
+  State<Prova> createState() => _ProvaState();
+}
+
+mixin SharedState<T extends StatefulWidget> on State<T> {
+  List<Signal> signals = [];
+
+  @override
+  void initState() {
+    super.initState();
+    for (final state in signals) {
+      state.watch(_refresh);
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    for (final state in signals) {
+      state.unwatch();
+    }
+  }
+
+  void _refresh<R>(R param) {
+    if (mounted) setState(() {});
+  }
+
+  void watch<R>(Signal<R> provider) => provider.watch(_refresh);
+  void unwatch<R>(Signal<R> provider) => provider.unwatch();
+}
+
+final fetched = AsyncSignal(() {
+  return Future.value(10);
+});
+
+class _ProvaState extends State<Prova> with SharedState {
+  @override
+  List<Signal> get signals => [fetched, counter];
+
+  @override
+  Widget build(BuildContext context) {
+    return fetched.when((status) {
+      fetched.fetch();
+      if (status.loading) return Text("Loading...");
+      if (status.isError) return Text("An error occured");
+      return Text(status.data.toString());
+    });
+  }
+}

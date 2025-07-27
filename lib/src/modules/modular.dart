@@ -30,7 +30,7 @@
 */
 
 import 'package:flutter/cupertino.dart';
-import 'events.dart';
+import '../events/events.dart';
 import 'injector.dart';
 
 /// Type for the builder function type for extensions

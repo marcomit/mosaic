@@ -30,20 +30,13 @@
 */
 
 import 'dart:async';
-import 'dart:io';
 
-// import 'package:flutter/foundation.dart';
-// import 'package:modules/modules.dart';
-// import 'package:api/api.dart';
-import 'package:flutter/cupertino.dart';
+import 'logger_dispatcher.dart';
+import 'logger_wrapper.dart';
 
-import 'modules.dart';
-import 'mutex.dart';
-import 'semaphore.dart';
+import '../modules/modules.dart';
 
 enum LogType { debug, info, warning, error }
-
-typedef LoggerWrapperCallback = String Function(String, LogType, List<String>);
 
 final logger = Logger();
 
@@ -139,9 +132,9 @@ class Logger {
     _dispatchers.remove(dispatcher.name);
   }
 
-  void addWrapper(LoggerWrapperCallback c) => _wrapper.addWrapper(c);
+  void addWrapper(LoggerWrapperCallback c) => _wrapper.add(c);
 
-  void removeWrapper() => _wrapper.removeWrapper();
+  void removeWrapper() => _wrapper.remove();
 
   bool _canDispatch(List<String> tags) {
     if (_tags.isEmpty) return true;
@@ -192,36 +185,17 @@ class Logger {
   }
 }
 
-class LoggerWrapper {
-  final List<LoggerWrapperCallback> _wrappers = [];
-
-  String wrap(String message, LogType type, List<String> tags) {
-    for (final wrapper in _wrappers) {
-      message = wrapper(message, type, tags);
-    }
-    return message;
-  }
-
-  addWrapper(LoggerWrapperCallback callback) {
-    _wrappers.add(callback);
-  }
-
-  removeWrapper() {
-    if (_wrappers.isNotEmpty) _wrappers.removeLast();
-  }
-}
-
 /// Mixin to have builtin method of logger class
 mixin Loggable {
   /// This field can be overrided such that by default uses those tags to log
   final List<String> loggerTags = [];
 
-  log(
+  Future<void> log(
     String message, {
     LogType type = LogType.info,
     List<String> tags = const [],
-  }) {
-    logger.log(message, type: type, tags: [...loggerTags, ...tags]);
+  }) async {
+    await logger.log(message, type: type, tags: [...loggerTags, ...tags]);
   }
 
   Future<void> debug(String message, [List<String> tags = const []]) async {
@@ -238,107 +212,5 @@ mixin Loggable {
 
   Future<void> error(String message, [List<String> tags = const []]) async {
     await log(message, type: LogType.error, tags: tags);
-  }
-}
-
-/// LoggerDispatcher is the abstract class for log in different mode.
-/// It is used by the Logger class when it dispatch a log.
-/// When the log function of logger is called it execute `secureCall` that it cannot be overrided.
-abstract class LoggerDispatcher {
-  final String name;
-  bool active = true;
-
-  final LoggerWrapper _wrapper = LoggerWrapper();
-
-  LoggerDispatcher({required this.name});
-
-  /// Initialize the LoggerDispatcher
-  Future<void> init() async {}
-
-  Future<void> secureCall(
-    String message,
-    LogType type,
-    List<String> tags,
-  ) async {
-    message = _wrapper.wrap(message, type, tags);
-    await log(message, type, tags);
-  }
-
-  Future<void> log(String message, LogType type, List<String> tags);
-}
-
-class ConsoleDispatcher extends LoggerDispatcher {
-  final _s = Semaphore();
-  ConsoleDispatcher() : super(name: "console");
-
-  @override
-  Future<void> log(String message, LogType type, List<String> tags) async {
-    await _s.lock();
-    debugPrint(message);
-    _s.release();
-  }
-}
-
-/// FileLoggerDispatcher is used to log in files
-/// The goal of this logger dispatcher is to write logs in different files
-/// splitted per tags. By default it writes all logs in one file and one file per tags
-/// Allowing to write a log in multiple files.
-/// For now it saves the file with the following format by defalt:
-/// [tag]_[year]_[month]_[day].log
-/// Such that there's one file (for the same tag) per day.
-/// But its format is defined by the [fileNameRole] that you can pass in the constructor.
-class FileLoggerDispatcher extends LoggerDispatcher {
-  final String path;
-  final bool relative;
-  final Mutex<Map<String, Mutex<File>>> _files = Mutex({});
-
-  /// Function that you can modify to choose the name of the file log
-  final String Function(String) fileNameRole;
-
-  String get _path => [relative ? Directory.current.path : "", path].join('/');
-
-  FileLoggerDispatcher({
-    this.path = "",
-    this.relative = true,
-    this.fileNameRole = FileLoggerDispatcher.defaultFileNameRole,
-  }) : super(name: "file");
-
-  static String defaultFileNameRole(String tag) {
-    final date = DateTime.now();
-
-    String pad(int n, [int len = 2]) => n.toString().padLeft(2, '0');
-
-    return "${tag}_${date.year}_${pad(date.month)}_${pad(date.day)}.log";
-  }
-
-  Future<Mutex<File>> _createIfAbsent(String tag) async {
-    final files = await _files.lock();
-    if (files.containsKey(tag)) return files[tag]!;
-    final file = File([_path, fileNameRole(tag)].join('/'));
-    if (!await file.exists()) {
-      await file.create(recursive: true);
-    }
-    files[tag] = Mutex(file);
-    _files.release();
-    return files[tag]!;
-  }
-
-  Future<void> _writeFile(String message, String tag) async {
-    final mutex = await _createIfAbsent(tag);
-    final f = await mutex.lock();
-
-    try {
-      await f.writeAsString("$message\n", mode: FileMode.append);
-    } finally {
-      mutex.release();
-    }
-  }
-
-  @override
-  Future<void> log(String message, LogType type, List<String> tags) async {
-    await _writeFile(message, 'all-logs');
-    for (final tag in tags) {
-      await _writeFile(message, tag);
-    }
   }
 }

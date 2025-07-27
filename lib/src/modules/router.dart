@@ -31,42 +31,66 @@
 
 import 'dart:async';
 
-import 'events.dart';
+import 'package:flutter/cupertino.dart';
+import 'automodule.dart';
+import '../events/events.dart';
+import '../logger/logger.dart';
+import 'modules.dart';
 
-abstract class Segment {
-  String topic;
-  Segment(this.topic);
+class InternalRouter with Loggable {
+  static final _instance = InternalRouter._internal();
 
-  Segment $(String data) {
-    if (topic.isNotEmpty) topic += Events.sep;
-    topic += data;
-    return this;
+  @override
+  List<String> get loggerTags => ["router"];
+
+  final List<ModuleEnum> _history = [];
+
+  Module get _current => moduleManager.current!;
+
+  ModuleEnum? get current => _history.lastOrNull;
+
+  InternalRouter._internal();
+
+  void init(ModuleEnum defaultModule) {
+    router._history.add(defaultModule);
   }
 
-  void emit<T>([T? data, bool retain = false]) =>
-      events.emit<T>(topic, data, retain);
+  Future<T> push<T>(Widget widget) => _current.push(widget);
 
-  EventListener<T> on<T>(EventCallback<T> callback) =>
-      events.on<T>(topic, callback);
+  void pop<T>([T? value]) => _current.pop(value);
 
-  Future<void> wait<T>(EventCallback<T> callback) async {
-    Completer c = Completer();
+  void goto(ModuleEnum moduleName) {
+    _history.add(moduleName);
+    _goto();
+  }
 
-    final listener = on(callback);
+  void _goto() {
+    if (_history.isEmpty) return;
+    if (!moduleManager.actives.containsKey(_history.last.name)) return;
+    info('current module ${_history.last.name}');
+    events.emit<String>(
+      ['router', 'change', _history.last.name].join(Events.sep),
+      '',
+    );
+    // events.router.change.id(_history.last.name).emit<String>('');
+  }
 
-    await c.future;
+  void goBack() {
+    if (_history.isEmpty) {
+      throw Exception(
+        "Stai provando a tornare indietro quando lo stack e' vuoto",
+      );
+    }
+    info('Before go back ${_history.map((c) => c.name)}');
+    _history.removeLast();
+    info("Go back to ${_history.last.name}");
+    _goto();
+  }
 
-    events.deafen(listener);
+  void clear() {
+    info("Clearing the module ${_current.name}");
+    _current.clear();
   }
 }
 
-mixin Id on Segment {
-  id(String param) => $(param);
-}
-
-mixin Param on Segment {
-  Segment params(List<String> params) {
-    topic = [topic, ...params].join(Events.sep);
-    return this;
-  }
-}
+final router = InternalRouter._instance;

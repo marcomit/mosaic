@@ -28,21 +28,25 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-library;
+import 'logger.dart';
 
-export 'src/events/chain.dart';
-export 'src/events/events.dart';
-export 'src/logger/logger.dart';
-export 'src/logger/logger_wrapper.dart';
-export 'src/logger/logger_dispatcher.dart';
-export 'src/signal/signal.dart';
-export 'src/signal/list_signal.dart';
-export 'src/signal/shared_state.dart';
-export 'src/modules/router.dart';
-export 'src/modules/modules.dart';
-export 'src/modules/modular.dart';
-export 'src/modules/injector.dart';
-export 'src/modules/automodule.dart';
-export 'src/thread_safety/mutex.dart';
-export 'src/thread_safety/semaphore.dart';
-export 'src/thread_safety/autoqueue.dart';
+typedef LoggerWrapperCallback = String Function(String, LogType, List<String>);
+
+class LoggerWrapper {
+  final List<LoggerWrapperCallback> _wrappers = [];
+
+  String wrap(String message, LogType type, List<String> tags) {
+    for (final wrapper in _wrappers) {
+      message = wrapper(message, type, tags);
+    }
+    return message;
+  }
+
+  void add(LoggerWrapperCallback callback) {
+    _wrappers.add(callback);
+  }
+
+  void remove() {
+    if (_wrappers.isNotEmpty) _wrappers.removeLast();
+  }
+}

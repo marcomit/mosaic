@@ -32,8 +32,9 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
-import 'events.dart';
-import 'logger.dart';
+import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
+import '../events/events.dart';
+import '../logger/logger.dart';
 
 /// Rappresenta una voce nello stack interno di un modulo.
 /// Contiene un widget e un Completer per completare una future quando viene fatto il pop.
@@ -49,8 +50,7 @@ class InternalRoute<T> {
 
 /// Rappresenta un modulo dell'applicazione con il proprio stack di navigazione interno.
 abstract class Module with Loggable {
-  /// Enumeratore per tipizzare i moduli disponibili
-  // final ModuleEnum enumerator;
+  final DependencyInjector di = DependencyInjector();
 
   @override
   List<String> get loggerTags => [name];

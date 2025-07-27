@@ -31,7 +31,6 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:flutter/foundation.dart';
 import 'build.dart';
 import 'events.dart';
 import 'init.dart';
@@ -101,10 +100,10 @@ void main(List<String> args) {
   final res = parser.parse(args);
 
   if (res.command == null) {
-    debugPrint("No command provided. Usage: module <command>\n");
-    debugPrint("COMMANDS");
+    print("No command provided. Usage: module <command>\n");
+    print("COMMANDS");
     for (final cmd in cmds.children) {
-      debugPrint("${cmd.val.padRight(15)}: ${cmd.description}");
+      print("${cmd.val.padRight(15)}: ${cmd.description}");
     }
     exit(1);
   }

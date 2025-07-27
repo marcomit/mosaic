@@ -31,8 +31,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-
 import 'build.dart';
 
 extension on String {
@@ -160,5 +158,5 @@ mixin HeadNode {
   ${headProps.join("\n  ")}
 }
 """);
-  debugPrint("event_tree.dart generated!");
+  print("event_tree.dart generated!");
 }

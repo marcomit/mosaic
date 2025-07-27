@@ -28,21 +28,16 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-library;
 
-export 'src/events/chain.dart';
-export 'src/events/events.dart';
-export 'src/logger/logger.dart';
-export 'src/logger/logger_wrapper.dart';
-export 'src/logger/logger_dispatcher.dart';
-export 'src/signal/signal.dart';
-export 'src/signal/list_signal.dart';
-export 'src/signal/shared_state.dart';
-export 'src/modules/router.dart';
-export 'src/modules/modules.dart';
-export 'src/modules/modular.dart';
-export 'src/modules/injector.dart';
-export 'src/modules/automodule.dart';
-export 'src/thread_safety/mutex.dart';
-export 'src/thread_safety/semaphore.dart';
-export 'src/thread_safety/autoqueue.dart';
+import 'signal.dart';
+
+class ListSignal<T> extends Signal<List<T>> {
+  ListSignal() : super([]);
+
+  void add(T item) => state.add(item);
+  bool remove(T item) => state.remove(item);
+
+  T? removeLast() => state.removeLast();
+  T? removeAt(int index) => state.removeAt(index);
+  void removeWhere(bool Function(T) test) => state.removeWhere(test);
+}
