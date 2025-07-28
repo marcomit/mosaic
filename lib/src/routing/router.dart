@@ -33,6 +33,7 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:mosaic/mosaic.dart';
+import 'package:mosaic/src/modules/module_manager.dart';
 import 'package:mosaic/src/routing/route_context.dart';
 import 'package:mosaic/src/routing/route_history_entry.dart';
 
