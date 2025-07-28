@@ -28,38 +28,34 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
 import 'package:flutter/widgets.dart';
-import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
-import 'package:mosaic/src/modules/automodule.dart';
-import 'package:mosaic/src/routing/router.dart';
-import 'package:mosaic/src/signal/signal.dart';
+import 'package:mosaic/src/routing/route_context.dart';
 
-extension RouteExtension on BuildContext {
-  Future<T> push<T>(Widget page) async => await router.push(page);
-  void pop<T>([T? value]) => router.pop(value);
+typedef RouteNodeBuilder =
+    Widget Function(BuildContext, RouteTransitionContext);
 
-  void go<T>(ModuleEnum name, [T? value]) => router.goto(name, value);
-  void goBack<T>([T? value]) => router.goBack(value);
-}
+class RouteNode {
+  final String path;
+  final RouteNodeBuilder builder;
+  final List<RouteNode> routes;
 
-extension SignalExtension on BuildContext {
-  void watch<T>(Signal<T> signal) => signal.watch((_) {}, this);
-  void unwatch<T>(Signal<T> signal) => signal.unwatch(this);
-}
+  RouteNode({
+    required this.path,
+    required this.builder,
+    this.routes = const [],
+  });
 
-extension DependencyExtension on BuildContext {
-  T get<T extends Object>() => global.get<T>();
-}
+  Map<String, dynamic> parseUrlParams(String params) {
+    final res = <String, dynamic>{};
 
-class Service {}
+    final list = params.split('&');
 
-class Test extends StatelessWidget {
-  const Test({super.key});
+    for (final item in list) {
+      final entry = item.split('=');
+      if (entry.length != 2) continue;
+      res[entry[0]] = entry[1];
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    final c = context.get<Service>();
-    return const Placeholder();
+    return res;
   }
 }

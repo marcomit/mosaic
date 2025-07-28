@@ -120,9 +120,9 @@ class InternalRouter with Loggable {
 
     _validateModuleStatus(to);
 
-    final ctx = RouteContext(from: from, to: to, params: params);
+    final ctx = RouteTransitionContext(from: from, to: to, params: params);
 
-    events.emit<RouteContext>(
+    events.emit<RouteTransitionContext>(
       ['router', 'change', module.name].join(Events.sep),
       ctx,
     );

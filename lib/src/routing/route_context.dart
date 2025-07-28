@@ -31,11 +31,11 @@
 
 import '../modules/modules.dart';
 
-class RouteContext<T> {
+class RouteTransitionContext<T> {
   final Module? from;
   final Module to;
   final T? params;
   final DateTime timestamp = DateTime.now();
 
-  RouteContext({this.from, required this.to, this.params});
+  RouteTransitionContext({this.from, required this.to, this.params});
 }
