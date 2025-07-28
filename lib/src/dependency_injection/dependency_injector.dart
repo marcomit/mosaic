@@ -30,7 +30,7 @@
 */
 
 import 'package:mosaic/src/logger/logger.dart';
-import 'package:mosaic/utils/basic_exception.dart';
+import '../../exceptions.dart';
 
 final global = DependencyInjector();
 
@@ -61,6 +61,20 @@ class DependencyInjector {
 
   final Map<Type, Object Function()> _toLazy = {};
   final Map<Type, Object> _cached = {};
+
+  List<Object> get instances {
+    List<Object> result = [];
+    Set<Type> seen = {};
+    for (final entry in _instances.entries) {
+      seen.add(entry.key);
+      result.add(entry.value);
+    }
+    for (final entry in _cached.entries) {
+      if (seen.contains(entry.key)) continue;
+      result.add(entry.value);
+    }
+    return result;
+  }
 
   /// Checks if a dependency type is already registered in the given map.
   ///
@@ -253,9 +267,3 @@ class DependencyInjector {
   /// Returns `true` if the type was found and removed, `false` otherwise.
   bool _removeIfPresent<T>(Map<Type, Object> map) => map.remove(T) != null;
 }
-
-class TestService {
-  void prova() {}
-}
-
-void test() {}

@@ -31,6 +31,8 @@
 
 import 'dart:math';
 
+import 'package:mosaic/exceptions.dart';
+
 import '../logger/logger.dart';
 
 /// Contains information passed to a listener when an event is emitted.

@@ -1,0 +1,219 @@
+/* 
+* BSD 3-Clause License
+* 
+* Copyright (c) 2025, Marco Menegazzi
+* 
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+* 
+* 1. Redistributions of source code must retain the above copyright notice, this
+*   list of conditions and the following disclaimer.
+*
+* 2. Redistributions in binary form must reproduce the above copyright notice,
+*  this list of conditions and the following disclaimer in the documentation
+*  and/or other materials provided with the distribution.
+*
+* 3. Neither the name of the copyright holder nor the names of its
+*  contributors may be used to endorse or promote products derived from
+*  this software without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+import 'dart:async';
+
+import 'package:mosaic/exceptions.dart';
+import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
+import 'package:mosaic/src/events/events.dart';
+import 'package:mosaic/src/logger/logger.dart';
+import 'package:mosaic/src/modules/modules.dart';
+
+/// Manages all modules in the application and provides centralized control
+/// over module lifecycle, error handling, and state management.
+class ModuleManager with Loggable {
+  static final _instance = ModuleManager._internal();
+
+  @override
+  List<String> get loggerTags => ['module_manager'];
+
+  final _container = DependencyInjector();
+
+  /// Map of all registered modules indexed by name.
+  // final Map<String, Module> _modules = {};
+
+  /// Name of the default module to use when none is specified.
+  String? defaultModule;
+
+  /// Name of the currently active module.
+  String? currentModule;
+
+  /// Lock for synchronizing module operations.
+  final _operationLock = Completer<void>();
+
+  ModuleManager._internal() {
+    _operationLock.complete();
+  }
+
+  /// All registered modules (read-only view).
+  Map<String, Module> get _modules {
+    final Map<String, Module> result = {};
+    for (final module in _container.instances) {
+      if (module is! Module) {
+        warning("It is registered a non module instance");
+        continue;
+      }
+      result[module.name] = module;
+    }
+    return Map.unmodifiable(result);
+  }
+
+  /// Only active modules (read-only view).
+  Map<String, Module> get activeModules {
+    return Map.unmodifiable(
+      Map.fromEntries(_modules.entries.where((entry) => entry.value.active)),
+    );
+  }
+
+  /// The currently active module, if any.
+  Module get current {
+    if (currentModule == null) {
+      throw ModuleException(
+        "Current module does not set! Consider setting it before!",
+      );
+    }
+    if (_modules.containsKey(currentModule)) {
+      throw RouterException("Current module does not exists");
+    }
+    return _modules[currentModule]!;
+  }
+
+  Future<void> register(Module module) async {
+    _container.put(module);
+    await activateModule(module.name);
+  }
+
+  Future<void> unregister<T extends Module>() async {
+    _container.remove<T>();
+  }
+
+  /// Registers a new module with the manager.
+  ///
+  /// **Parameters:**
+  /// * [module] - The module to register
+  ///
+  /// **Throws:**
+  /// * [ArgumentError] if a module with the same name already exists
+  Future<void> registerModule(Module module) async {
+    if (_modules.containsKey(module.name)) {
+      throw ArgumentError('Module ${module.name} is already registered');
+    }
+
+    _modules[module.name] = module;
+    info('Registered module ${module.name}');
+
+    // Auto-initialize if this is the default module
+    if (defaultModule == module.name) {
+      await activateModule(module.name);
+    }
+  }
+
+  /// Unregisters and disposes a module.
+  ///
+  /// **Parameters:**
+  /// * [name] - Name of the module to unregister
+  Future<void> unregisterModule(String name) async {
+    final module = _modules.remove(name);
+    if (module != null) {
+      await module.dispose();
+      info('Unregistered module $name');
+
+      if (currentModule == name) {
+        currentModule = null;
+      }
+    }
+  }
+
+  /// Activates a module, making it the current active module.
+  ///
+  /// **Parameters:**
+  /// * [name] - Name of the module to activate
+  ///
+  /// **Throws:**
+  /// * [ArgumentError] if the module doesn't exist
+  /// * [ModuleException] if activation fails
+  Future<void> activateModule(Module module) async {
+    if (module.state == ModuleLifecycleState.uninitialized) {
+      await module.initialize();
+    } else if (module.state == ModuleLifecycleState.suspended) {
+      await module.resume();
+    } else if (module.state == ModuleLifecycleState.error) {
+      final recovered = await module.recover();
+      if (!recovered) {
+        throw ModuleException(
+          'Failed to recover module ${module.name}',
+          moduleName: module.name,
+        );
+      }
+    }
+
+    currentModule = module.name;
+    module.onActive();
+    info('Activated module ${module.name}');
+
+    events.emit<String>('module_manager/module_activated', module.name);
+  }
+
+  /// Suspends a module without disposing it.
+  ///
+  /// **Parameters:**
+  /// * [name] - Name of the module to suspend
+  Future<void> suspendModule(String name) async {
+    final module = _modules[name];
+    if (module != null && module.active) {
+      await module.suspend();
+      info('Suspended module $name');
+    }
+  }
+
+  /// Disposes all modules and cleans up resources.
+  Future<void> disposeAll() async {
+    info('Disposing all modules');
+
+    final futures = _modules.values.map((module) => module.dispose());
+    await Future.wait(futures);
+
+    _modules.clear();
+    currentModule = null;
+    defaultModule = null;
+
+    info('All modules disposed');
+  }
+
+  /// Gets module health status for monitoring.
+  Map<String, Map<String, dynamic>> getHealthStatus() {
+    return Map.fromEntries(
+      _modules.entries.map((entry) {
+        final module = entry.value;
+        return MapEntry(entry.key, {
+          'state': module.state.name,
+          'active': module.active,
+          'hasError': module.hasError,
+          'lastError': module.lastError?.toString(),
+          'stackDepth': module.stackDepth,
+        });
+      }),
+    );
+  }
+}
+
+/// Istanza globale del gestore dei moduli, accessibile ovunque.
+final moduleManager = ModuleManager._instance;

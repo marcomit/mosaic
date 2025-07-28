@@ -41,9 +41,8 @@ class RateLimiter {
 
     _timestamps.removeWhere((t) => now.difference(t) > window);
 
-    if (_timestamps.length > maxRate) {
-      return true;
-    }
+    if (_timestamps.length > maxRate) return true;
+
     _timestamps.add(now);
     return false;
   }

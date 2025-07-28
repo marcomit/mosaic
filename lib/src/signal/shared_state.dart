@@ -31,23 +31,6 @@
 import 'package:flutter/widgets.dart';
 import 'signal.dart';
 
-class CounterSignal extends Signal<int> {
-  CounterSignal(super._state);
-
-  void increment() => state++;
-  void decrement() => state--;
-  void reset() => state = 0;
-}
-
-final counter = CounterSignal(10);
-
-class Prova extends StatefulWidget {
-  const Prova({super.key});
-
-  @override
-  State<Prova> createState() => _ProvaState();
-}
-
 mixin SharedState<T extends StatefulWidget> on State<T> {
   List<Signal> signals = [];
 
@@ -73,23 +56,4 @@ mixin SharedState<T extends StatefulWidget> on State<T> {
 
   void watch<R>(Signal<R> provider) => provider.watch(_refresh);
   void unwatch<R>(Signal<R> provider) => provider.unwatch();
-}
-
-final fetched = AsyncSignal(() {
-  return Future.value(10);
-});
-
-class _ProvaState extends State<Prova> with SharedState {
-  @override
-  List<Signal> get signals => [fetched, counter];
-
-  @override
-  Widget build(BuildContext context) {
-    return fetched.when((status) {
-      fetched.fetch();
-      if (status.loading) return Text("Loading...");
-      if (status.isError) return Text("An error occured");
-      return Text(status.data.toString());
-    });
-  }
 }

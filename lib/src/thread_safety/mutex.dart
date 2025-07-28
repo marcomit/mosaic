@@ -67,10 +67,13 @@ class Mutex<T> {
 
   /// Method to handle data
   Future<V> use<V>(Future<V> Function(T) callback) async {
-    await lock();
-    final res = await callback(_data);
-    release();
-    return res;
+    try {
+      await lock();
+      final res = await callback(_data);
+      return res;
+    } finally {
+      release();
+    }
   }
 
   /// Lock the access to the data and returns it.

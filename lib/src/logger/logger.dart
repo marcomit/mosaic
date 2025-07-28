@@ -33,7 +33,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
-import 'package:mosaic/src/logger/logger_excetion.dart';
+import 'package:mosaic/exceptions.dart';
 import 'package:mosaic/utils/rate_limiter.dart';
 
 import 'logger_dispatcher.dart';
@@ -329,7 +329,7 @@ class Logger {
   ///
   /// **Returns:** The message with module name prefix added
   static String addCurrentModule(String message, LogLevel type) {
-    return "${moduleManager.current?.name} $message";
+    return "${moduleManager.current.name} $message";
   }
 
   /// Creates a copy of this logger with additional default tags.
@@ -1098,4 +1098,3 @@ mixin Loggable {
     await log(message, type: LogType.error, tags: tags);
   }
 }
-

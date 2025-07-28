@@ -73,6 +73,9 @@ class InternalRouter with Loggable {
   void pop<T>([T? value]) => _current.pop(value);
 
   Future<void> goto<T>(ModuleEnum moduleName, [T? value]) async {
+    if (_disposed) {
+      throw RouterException("Router was disposed");
+    }
     await _navigation.lock();
     try {
       Module? from;
@@ -135,9 +138,16 @@ class InternalRouter with Loggable {
     return moduleManager.activeModules[m.name]!;
   }
 
+  void _checkDisposed() {
+    if (_disposed) {
+      throw RouterException("Router was disposed");
+    }
+  }
+
   void goBack<T>([T? value]) {
+    _checkDisposed();
     if (_history.isEmpty) {
-      throw Exception("Cannot go back: navigation history is empty");
+      throw RouterException("Cannot go back", cause: "Stack history is empty");
     }
 
     info('Before go back ${_history.map((c) => c.module.name)}');
@@ -165,6 +175,7 @@ class InternalRouter with Loggable {
       warning("Router already disposed");
       return;
     }
+    _disposed = true;
     for (final entry in _history) {
       entry.completer.complete();
     }
