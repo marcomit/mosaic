@@ -29,11 +29,15 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 import 'dart:io';
-
 import 'package:args/args.dart';
+import 'package:http/http.dart' as http;
+import 'package:archive/archive_io.dart';
+import 'package:path/path.dart' as p;
+
 import 'build.dart';
 import 'events.dart';
 import 'init.dart';
+import 'gesso.dart';
 
 class ArgNode {
   final String val;
@@ -70,6 +74,11 @@ class ArgNode {
 final cmds = ArgNode(
   "",
   children: [
+    ArgNode(
+      'create',
+      callback: create,
+      description: "Create a new mosaic project",
+    ),
     ArgNode('init', callback: init, description: "Initialize a mosaic project"),
     ArgNode('add', callback: addModule, description: "Add a module"),
     ArgNode('enable', callback: enable, description: "Enable a module"),
@@ -103,7 +112,7 @@ void main(List<String> args) {
     print("No command provided. Usage: module <command>\n");
     print("COMMANDS");
     for (final cmd in cmds.children) {
-      print("${cmd.val.padRight(15)}: ${cmd.description}");
+      print("${cmd.val.padRight(10)}: ${cmd.description}");
     }
     exit(1);
   }
@@ -112,4 +121,3 @@ void main(List<String> args) {
     child.parse(res);
   }
 }
-
