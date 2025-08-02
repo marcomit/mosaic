@@ -92,3 +92,10 @@ class LoggerException extends MosaicException {
   String get name => "LoggerException";
   LoggerException(super.message, {super.fix, super.cause});
 }
+
+class ImcException extends MosaicException {
+  ImcException(super.message, {super.fix, super.cause});
+
+  @override
+  String get name => "ImcException";
+}

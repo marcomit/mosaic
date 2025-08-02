@@ -29,25 +29,54 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-import 'package:flutter/widgets.dart';
-import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
-import 'package:mosaic/src/modules/automodule.dart';
-import 'package:mosaic/src/routing/router.dart';
-import 'package:mosaic/src/signal/signal.dart';
+import 'package:flutter/material.dart';
+import 'package:mosaic/src/events/events.dart';
+import 'package:mosaic/src/modules/modules.dart';
+import 'package:mosaic/src/routing/route_context.dart';
 
-extension RouteExtension on BuildContext {
-  Future<T> push<T>(Widget page) async => await router.push(page);
-  void pop<T>([T? value]) => router.pop(value);
+class MosaicApp extends StatefulWidget {
+  const MosaicApp({super.key, required this.modules, this.defaultModule});
 
-  void go<T>(ModuleEnum name, [T? value]) => router.goto(name, value);
-  void goBack<T>([T? value]) => router.goBack(value);
+  final List<Module> modules;
+  final String? defaultModule;
+
+  @override
+  State<MosaicApp> createState() => _MosaicAppState();
 }
 
-extension SignalExtension on BuildContext {
-  void watch<T>(Signal<T> signal) => signal.watch((_) {}, this);
-  void unwatch<T>(Signal<T> signal) => signal.unwatch(this);
-}
+class _MosaicAppState extends State<MosaicApp> {
+  final List<EventListener> _listeners = [];
 
-extension DependencyExtension on BuildContext {
-  T get<T extends Object>() => global.get<T>();
+  @override
+  void initState() {
+    super.initState();
+    final change = events.on<RouteTransitionContext>('router/change', _refresh);
+    final push = events.on<RouteTransitionContext>('router/push', _refresh);
+    final pop = events.on<RouteTransitionContext>('router/pop', _refresh);
+    _listeners.add(change);
+    _listeners.add(push);
+    _listeners.add(pop);
+  }
+
+  @override
+  void dispose() {
+    _listeners.forEach(events.deafen);
+    super.dispose();
+  }
+
+  void _refresh<T>(EventContext<T> ctx) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(children: widget.modules.map(moduleEntry).toList()),
+    );
+  }
+
+  Widget moduleEntry(Module module) {
+    final children = [module.build(context), ...module.stack];
+    return IndexedStack(index: children.length - 1, children: children);
+  }
 }
