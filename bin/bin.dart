@@ -30,27 +30,23 @@
 */
 import 'dart:io';
 import 'package:args/args.dart';
-import 'package:http/http.dart' as http;
-import 'package:archive/archive_io.dart';
-import 'package:path/path.dart' as p;
 
 import 'build.dart';
 import 'events.dart';
 import 'init.dart';
-import 'gesso.dart';
 
 class ArgNode {
+  ArgNode(
+    this.val, {
+    this.description = '',
+    this.children = const [],
+    this.callback,
+  });
+
   final String val;
   final String description;
   final List<ArgNode> children;
   final Future<void> Function(ArgResults?)? callback;
-
-  ArgNode(
-    this.val, {
-    this.description = "",
-    this.children = const [],
-    this.callback,
-  });
 
   ArgParser addCommand(ArgParser parser) {
     final added = parser.addCommand(val);
@@ -72,29 +68,29 @@ class ArgNode {
 }
 
 final cmds = ArgNode(
-  "",
+  '',
   children: [
     ArgNode(
       'create',
       callback: create,
-      description: "Create a new mosaic project",
+      description: 'Create a new mosaic project',
     ),
-    ArgNode('init', callback: init, description: "Initialize a mosaic project"),
-    ArgNode('add', callback: addModule, description: "Add a module"),
-    ArgNode('enable', callback: enable, description: "Enable a module"),
-    ArgNode('disable', callback: disable, description: "Disable a module"),
-    ArgNode('default', callback: setDefault, description: "Set default module"),
-    ArgNode('list', callback: listModules, description: "List modules"),
-    ArgNode('remove', callback: removeModule, description: "Remove a module"),
+    ArgNode('init', callback: init, description: 'Initialize a mosaic project'),
+    ArgNode('add', callback: addModule, description: 'Add a module'),
+    ArgNode('enable', callback: enable, description: 'Enable a module'),
+    ArgNode('disable', callback: disable, description: 'Disable a module'),
+    ArgNode('default', callback: setDefault, description: 'Set default module'),
+    ArgNode('list', callback: listModules, description: 'List modules'),
+    ArgNode('remove', callback: removeModule, description: 'Remove a module'),
     ArgNode(
       'build',
-      callback: (_) async => await build(),
-      description: "Build all modules",
+      callback: (_) => build(),
+      description: 'Build all modules',
     ),
     ArgNode(
       'events',
-      callback: (_) async => await events(),
-      description: "Generate event tree",
+      callback: (_) => events(),
+      description: 'Generate event tree',
     ),
   ],
 );
@@ -109,10 +105,10 @@ void main(List<String> args) {
   final res = parser.parse(args);
 
   if (res.command == null) {
-    print("No command provided. Usage: module <command>\n");
-    print("COMMANDS");
+    print('No command provided. Usage: module <command>\n');
+    print('COMMANDS');
     for (final cmd in cmds.children) {
-      print("${cmd.val.padRight(10)}: ${cmd.description}");
+      print('${cmd.val.padRight(10)}: ${cmd.description}');
     }
     exit(1);
   }

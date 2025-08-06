@@ -38,6 +38,8 @@ typedef ModularExtensionBuilder = Widget Function(BuildContext);
 
 /// Extensions class
 class ModularExtension {
+  ModularExtension(this.builder, {this.priority = 0, this.category});
+
   /// The builder that create the [Widget]
   final ModularExtensionBuilder builder;
 
@@ -47,8 +49,6 @@ class ModularExtension {
   /// Extensions can be categorized
   final String? category;
 
-  ModularExtension(this.builder, {this.priority = 0, this.category});
-
   /// Static method used to sort extensions
   static int _compare(ModularExtension a, ModularExtension b) {
     return a.priority - b.priority;
@@ -57,16 +57,19 @@ class ModularExtension {
 
 /// Stateful Modular extension should have the
 abstract class ModularStatefulWidget extends StatefulWidget {
+  const ModularStatefulWidget({super.key, required this.path});
+
   /// Path is a list of string to permit having nested extensions.
   /// For now you should pass the parent path into the child.
   final List<String> path;
-  const ModularStatefulWidget({super.key, required this.path});
 
   @override
   ModularState<ModularStatefulWidget> createState();
 }
 
 abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
+  ModularState(this.id);
+
   /// Identifier of the Modular view
   final String id;
 
@@ -79,7 +82,6 @@ abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
   }
 
   /// Constructor (only need to define a static string [id])
-  ModularState(this.id);
 
   /// List of extensions
   final List<ModularExtension> extensions = [];
@@ -100,7 +102,7 @@ abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
 
   @override
   void initState() {
-    _extensionListener = injector.on(_topic("*"), _extensionCallback);
+    _extensionListener = injector.on(_topic('*'), _extensionCallback);
     super.initState();
   }
 

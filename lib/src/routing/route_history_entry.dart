@@ -34,10 +34,10 @@ import 'dart:async';
 import 'package:mosaic/src/modules/automodule.dart';
 
 class RouteHistoryEntry<T> {
+  RouteHistoryEntry(this.module);
+
   static int maxDepth = 50;
   final DateTime timestamp = DateTime.now();
   final Completer<T> completer = Completer<T>();
   final ModuleEnum module;
-
-  RouteHistoryEntry(this.module);
 }

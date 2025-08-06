@@ -47,7 +47,7 @@ extension GessoExtension on String {
   String wrap(List<int> codes) {
     if (codes.isEmpty) return this;
     final escape = codes.join(';');
-    return "\x1B[${escape}m$this\x1B[0m";
+    return '\x1B[${escape}m$this\x1B[0m';
   }
 
   /// Private helper method to apply a single style
@@ -65,6 +65,14 @@ extension GessoExtension on String {
     int code = color.value + 40;
     if (bright) code += 60;
     return wrap([code]);
+  }
+
+  String bg(int r, int g, int b) {
+    return '\x1B[48;2;$r;$g;${b}m$this\x1B[0m';
+  }
+
+  String fg(int r, int g, int b) {
+    return '\x1B[38;2;$r;$g;${b}m$this\x1B[0m';
   }
 
   // Text styling methods
@@ -280,9 +288,6 @@ extension GessoExtension on String {
 /// print(g.red.bold.underline('Error: Critical failure!'));
 /// ```
 class Gesso {
-  /// List of ANSI codes that define the current styling
-  final List<int> _codes;
-
   /// Creates a new [Gesso] instance with no styling applied
   Gesso() : _codes = <int>[];
 
@@ -291,6 +296,9 @@ class Gesso {
 
   /// Internal constructor for creating instances with specific codes
   Gesso._internal(this._codes);
+
+  /// List of ANSI codes that define the current styling
+  final List<int> _codes;
 
   /// Generates the ANSI escape sequence for the current styles
   String get _escapeSequence => _codes.join(';');
@@ -489,7 +497,7 @@ enum GessoStyle {
 /// Enumeration of available colors for foreground and background styling
 ///
 /// These correspond to the standard 8-color palette supported by most terminals.
-/// Each color can also be used in a "bright" variant by adding 60 to the base code.
+/// Each color can also be used in a 'bright' variant by adding 60 to the base code.
 enum GessoColor {
   /// Black color (ANSI code 0)
   black(0),

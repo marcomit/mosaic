@@ -36,7 +36,7 @@ import 'package:mosaic/src/routing/router.dart';
 import 'package:mosaic/src/signal/signal.dart';
 
 extension RouteExtension on BuildContext {
-  Future<T> push<T>(Widget page) async => await router.push(page);
+  Future<T> push<T>(Widget page) => router.push(page);
   void pop<T>([T? value]) => router.pop(value);
 
   void go<T>(ModuleEnum name, [T? value]) => router.goto(name, value);
@@ -50,16 +50,4 @@ extension SignalExtension on BuildContext {
 
 extension DependencyExtension on BuildContext {
   T get<T extends Object>() => global.get<T>();
-}
-
-class Service {}
-
-class Test extends StatelessWidget {
-  const Test({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.get<Service>();
-    return const Placeholder();
-  }
 }

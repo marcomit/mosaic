@@ -67,19 +67,6 @@ typedef InternalQueueAction<T> = Future<T> Function();
 /// node.resolve('Hello World');
 /// ```
 class InternalQueueNode<T> {
-  /// Completer used to signal operation completion to waiting callers.
-  ///
-  /// This completer is resolved when the operation completes successfully
-  /// or rejected when the operation fails after all retry attempts.
-  final Completer<T> _completer = Completer<T>();
-
-  /// The asynchronous operation to be executed.
-  ///
-  /// This function will be called when the queue processes this node.
-  /// It should complete with a value of type [T] or throw an exception
-  /// if the operation fails.
-  final InternalQueueAction<T> action;
-
   /// Creates a new queue node with the specified [action].
   ///
   /// The [action] parameter defines the operation to be executed when
@@ -93,6 +80,19 @@ class InternalQueueNode<T> {
   /// });
   /// ```
   InternalQueueNode(this.action);
+
+  /// Completer used to signal operation completion to waiting callers.
+  ///
+  /// This completer is resolved when the operation completes successfully
+  /// or rejected when the operation fails after all retry attempts.
+  final Completer<T> _completer = Completer<T>();
+
+  /// The asynchronous operation to be executed.
+  ///
+  /// This function will be called when the queue processes this node.
+  /// It should complete with a value of type [T] or throw an exception
+  /// if the operation fails.
+  final InternalQueueAction<T> action;
 
   /// Gets the future that completes when this operation finishes.
   ///
@@ -227,6 +227,34 @@ class _QueueState {
 /// All public methods are thread-safe and can be called from multiple
 /// isolates simultaneously. Internal state is protected by mutex locks.
 class InternalAutoQueue with Loggable {
+  /// Creates a new auto-retry queue with the specified configuration.
+  ///
+  /// **Parameters:**
+  /// - [maxRetries]: Maximum number of retry attempts for failed operations.
+  ///   Defaults to 1. Must be non-negative.
+  ///
+  /// **Example:**
+  /// ```dart
+  /// // Queue with default retry behavior (1 retry)
+  /// final defaultQueue = InternalAutoQueue();
+  ///
+  /// // Queue with custom retry limit
+  /// final customQueue = InternalAutoQueue(maxRetries: 5);
+  /// ```
+  ///
+  /// **Throws:**
+  /// - [ArgumentError] if [maxRetries] is negative
+  InternalAutoQueue([this.maxRetries = 1]) {
+    if (maxRetries < 0) {
+      throw ArgumentError.value(
+        maxRetries,
+        'maxRetries',
+        'Must be non-negative',
+      );
+    }
+    debug('Auto queue created with maxRetries: $maxRetries');
+  }
+
   /// Maximum number of retry attempts for failed operations.
   ///
   /// When an operation fails, it will be retried up to this many times
@@ -255,34 +283,6 @@ class InternalAutoQueue with Loggable {
   /// for easy filtering and debugging.
   @override
   List<String> get loggerTags => ['auto_queue'];
-
-  /// Creates a new auto-retry queue with the specified configuration.
-  ///
-  /// **Parameters:**
-  /// - [maxRetries]: Maximum number of retry attempts for failed operations.
-  ///   Defaults to 1. Must be non-negative.
-  ///
-  /// **Example:**
-  /// ```dart
-  /// // Queue with default retry behavior (1 retry)
-  /// final defaultQueue = InternalAutoQueue();
-  ///
-  /// // Queue with custom retry limit
-  /// final customQueue = InternalAutoQueue(maxRetries: 5);
-  /// ```
-  ///
-  /// **Throws:**
-  /// - [ArgumentError] if [maxRetries] is negative
-  InternalAutoQueue([this.maxRetries = 1]) {
-    if (maxRetries < 0) {
-      throw ArgumentError.value(
-        maxRetries,
-        'maxRetries',
-        'Must be non-negative',
-      );
-    }
-    debug('Auto queue created with maxRetries: $maxRetries');
-  }
 
   /// Adds an operation to the queue and returns a future for its result.
   ///
@@ -372,7 +372,7 @@ class InternalAutoQueue with Loggable {
   /// **Thread Safety:** This method is thread-safe and provides a
   /// consistent snapshot of the queue length at the time of the call.
   Future<int> get length async {
-    return await _queue.use((state) async => state.length);
+    return _queue.use((state) async => state.length);
   }
 
   /// Checks if the queue is currently empty.
@@ -386,7 +386,7 @@ class InternalAutoQueue with Loggable {
   /// }
   /// ```
   Future<bool> get isEmpty async {
-    return await _queue.use((state) async => state.isEmpty);
+    return _queue.use((state) async => state.isEmpty);
   }
 
   /// Automatically processes all operations in the queue.
@@ -513,7 +513,7 @@ class InternalAutoQueue with Loggable {
   Future<int> clear() async {
     debug('Clearing queue');
 
-    return await _queue.use((state) async {
+    return _queue.use((state) async {
       final cancelledCount = state.length;
 
       // Cancel all pending operations
@@ -552,4 +552,3 @@ class InternalAutoQueue with Loggable {
     debug('Auto queue disposed, cancelled $cancelledCount operations');
   }
 }
-

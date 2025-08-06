@@ -63,8 +63,8 @@ class DependencyInjector {
   final Map<Type, Object> _cached = {};
 
   List<Object> get instances {
-    List<Object> result = [];
-    Set<Type> seen = {};
+    final List<Object> result = [];
+    final Set<Type> seen = {};
     for (final entry in _instances.entries) {
       seen.add(entry.key);
       result.add(entry.value);
@@ -82,8 +82,8 @@ class DependencyInjector {
   void _checkIfAbsent<T extends Object>(Map<Type, Function()> map) {
     if (!map.containsKey(T)) return;
     throw DependencyException(
-      "Dependency $T already registered",
-      fix: "If you want to replace consider the use of override<T>()",
+      'Dependency $T already registered',
+      fix: 'If you want to replace consider the use of override<T>()',
     );
   }
 
@@ -233,8 +233,8 @@ class DependencyInjector {
     }
 
     throw DependencyException(
-      "Dependency $T does not exists in this container. ",
-      fix: "Try to use put<$T>() before calling it.",
+      'Dependency $T does not exists in this container. ',
+      fix: 'Try to use put<$T>() before calling it.',
     );
   }
 
@@ -256,7 +256,7 @@ class DependencyInjector {
     res |= _removeIfPresent<T>(_cached);
     res |= _removeIfPresent<T>(_instances);
     if (!res) {
-      logger.warning("Trying to remove $T but is not a registered dependency", [
+      logger.warning('Trying to remove $T but is not a registered dependency', [
         'dependency',
       ]);
     }

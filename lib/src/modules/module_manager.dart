@@ -40,6 +40,9 @@ import 'package:mosaic/src/modules/modules.dart';
 /// Manages all modules in the application and provides centralized control
 /// over module lifecycle, error handling, and state management.
 class ModuleManager with Loggable {
+  ModuleManager._internal() {
+    _operationLock.complete();
+  }
   static final _instance = ModuleManager._internal();
 
   @override
@@ -59,16 +62,12 @@ class ModuleManager with Loggable {
   /// Lock for synchronizing module operations.
   final _operationLock = Completer<void>();
 
-  ModuleManager._internal() {
-    _operationLock.complete();
-  }
-
   /// All registered modules (read-only view).
   Map<String, Module> get _modules {
     final Map<String, Module> result = {};
     for (final module in _container.instances) {
       if (module is! Module) {
-        warning("It is registered a non module instance");
+        warning('It is registered a non module instance');
         continue;
       }
       result[module.name] = module;
@@ -87,18 +86,18 @@ class ModuleManager with Loggable {
   Module get current {
     if (currentModule == null) {
       throw ModuleException(
-        "Current module does not set! Consider setting it before!",
+        'Current module does not set! Consider setting it before!',
       );
     }
     if (_modules.containsKey(currentModule)) {
-      throw RouterException("Current module does not exists");
+      throw RouterException('Current module does not exists');
     }
     return _modules[currentModule]!;
   }
 
   Future<void> register(Module module) async {
     _container.put(module);
-    await activateModule(module.name);
+    await activateModule(module);
   }
 
   Future<void> unregister<T extends Module>() async {
@@ -122,7 +121,7 @@ class ModuleManager with Loggable {
 
     // Auto-initialize if this is the default module
     if (defaultModule == module.name) {
-      await activateModule(module.name);
+      await activateModule(module);
     }
   }
 

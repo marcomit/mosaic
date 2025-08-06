@@ -46,11 +46,11 @@ import 'events.dart';
 /// userEvents.$('profile').$('update').emit<String>('John Doe');
 /// ```
 abstract class Segment {
-  /// The current topic path being built.
-  String topic;
-
   /// Creates a new segment with the given base [topic].
   Segment(this.topic);
+
+  /// The current topic path being built.
+  String topic;
 
   /// Appends a new segment to the current topic path.
   ///
@@ -154,7 +154,7 @@ abstract class Segment {
   }
 
   @override
-  String toString() => 'Segment("$topic")';
+  String toString() => 'Segment(\'$topic\')';
 }
 
 /// Mixin that adds ID-based path building to segments.

@@ -34,12 +34,11 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:mosaic/exceptions.dart';
+import 'package:mosaic/src/modules/module_manager.dart';
 import 'package:mosaic/utils/rate_limiter.dart';
 
 import 'logger_dispatcher.dart';
 import 'logger_wrapper.dart';
-
-import '../modules/modules.dart';
 
 /// The type of log message being recorded.
 ///
@@ -271,12 +270,12 @@ class Logger {
   ///
   /// **Returns:** The message with type prefix added
   static String addType(String message, LogType type, List<String> tags) {
-    return "${type.name}: $message";
+    return '${type.name}: $message';
   }
 
   /// Adds ISO 8601 timestamp prefix to messages.
   ///
-  /// **Example output:** `"2025-01-15T10:30:45.123Z User logged in"`
+  /// **Example output:** `'2025-01-15T10:30:45.123Z User logged in'`
   ///
   /// **Usage:**
   /// ```dart
@@ -290,12 +289,12 @@ class Logger {
   ///
   /// **Returns:** The message with timestamp prefix added
   static String addData(String message, LogType type, List<String> tags) {
-    return "${DateTime.now().toIso8601String()} $message";
+    return '${DateTime.now().toIso8601String()} $message';
   }
 
   /// Adds tag list prefix to messages.
   ///
-  /// **Example output:** `"[network,api] HTTP request completed"`
+  /// **Example output:** `'[network,api] HTTP request completed'`
   ///
   /// **Usage:**
   /// ```dart
@@ -309,14 +308,14 @@ class Logger {
   ///
   /// **Returns:** The message with tags prefix added
   static String addTags(String message, LogType type, List<String> tags) {
-    return "[${tags.join(',')}] $message";
+    return '[${tags.join(',')}] $message';
   }
 
   /// Adds current module name prefix to messages.
   ///
   /// Requires the module manager to be initialized with a current module.
   ///
-  /// **Example output:** `"UserModule User logged in"`
+  /// **Example output:** `'UserModule User logged in'`
   ///
   /// **Usage:**
   /// ```dart
@@ -329,7 +328,7 @@ class Logger {
   ///
   /// **Returns:** The message with module name prefix added
   static String addCurrentModule(String message, LogLevel type) {
-    return "${moduleManager.current.name} $message";
+    return '${moduleManager.current.name} $message';
   }
 
   /// Creates a copy of this logger with additional default tags.
@@ -351,7 +350,7 @@ class Logger {
   ///
   /// **Note:** The returned logger must be manually initialized with [init].
   Logger copy([List<String> defaultTags = const []]) {
-    Logger res = Logger();
+    final res = Logger();
     res._defaultTags.addAll(_defaultTags);
     res._defaultTags.addAll(defaultTags);
     res.init(tags: _tags.toList(), dispatchers: _dispatchers.values.toList());
@@ -391,7 +390,7 @@ class Logger {
   void _checkDisposed() {
     if (_disposed) {
       throw LoggerException(
-        "You cannot log because the logger was already disposed",
+        'You cannot log because the logger was already disposed',
       );
     }
   }
@@ -682,7 +681,7 @@ class Logger {
     LogType type,
     List<String> tags,
   ) async {
-    bool res = _canDispatch(tags);
+    final res = _canDispatch(tags);
     if (!res) return;
 
     if (!_shouldLog(type)) return;

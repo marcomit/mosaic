@@ -38,19 +38,7 @@ const String moduleEnv = 'config.json';
 const String moduleDir = 'modules';
 
 class _Module {
-  final String name;
-  bool active;
-  final List<String> dependencies;
   _Module(this.name, [this.active = false, this.dependencies = const []]);
-
-  bool _checkDependencies() {
-    final res = dependsOn(name);
-    if (res) {
-      print("Invalid dependency: It cannot depend on itself");
-      exit(1);
-    }
-    return res;
-  }
 
   factory _Module.fromJson(Map<String, dynamic> json) {
     final m = _Module(
@@ -62,6 +50,19 @@ class _Module {
     m._checkDependencies();
 
     return m;
+  }
+
+  final String name;
+  bool active;
+  final List<String> dependencies;
+
+  bool _checkDependencies() {
+    final res = dependsOn(name);
+    if (res) {
+      print('Invalid dependency: It cannot depend on itself');
+      exit(1);
+    }
+    return res;
   }
 
   bool dependsOn(String name) {
@@ -76,18 +77,19 @@ class _Module {
 }
 
 class _ModuleManager {
-  List<_Module> modules;
-  String? defaultModule;
   _ModuleManager(this.modules, this.defaultModule);
 
   factory _ModuleManager.fromJson(Map<String, dynamic> json) {
-    List<_Module> modules = [];
+    final List<_Module> modules = [];
     for (dynamic m in json['modules']) {
       modules.add(_Module.fromJson(m));
     }
 
     return _ModuleManager(modules, json['defaultModule']);
   }
+
+  List<_Module> modules;
+  String? defaultModule;
 
   Map<String, dynamic> get json => {
     'defaultModule': defaultModule,
@@ -103,7 +105,7 @@ class _ModuleManager {
       if (!m.active) continue;
       if (m.dependsOn(name)) {
         print(
-          "$name cannot be removed or disabled becase it depends on ${m.name}",
+          '$name cannot be removed or disabled becase it depends on ${m.name}',
         );
         res = false;
       }
@@ -118,12 +120,14 @@ class _ModuleManager {
     final content = await file.readAsString();
     final parsed = jsonDecode(content);
     parsed['modules'] = json;
-    await file.writeAsString(JsonEncoder.withIndent('  ').convert(parsed));
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(parsed),
+    );
   }
 
   Future loadFile() async {
     final imports = modules
-        .map((m) => 'import "package:${m.name}/${m.name}.dart" as ${m.name};')
+        .map((m) => 'import \'package:${m.name}/${m.name}.dart\' as ${m.name};')
         .join('\n');
     final loader = [];
     if (defaultModule != null) {
@@ -131,16 +135,16 @@ class _ModuleManager {
       loader.add('router.init(ModuleEnum.$defaultModule);');
     }
     for (final m in modules) {
-      loader.add("""
+      loader.add('''
   ${m.name}.module.active = ${m.active}; 
   moduleManager.modules[ModuleEnum.${m.name}] = ${m.name}.module;
-""");
+''');
     }
     final content =
         '''
-import "package:modules/modules.dart";
-import "package:modules/automodule.dart";
-import "package:modules/router.dart";
+import 'package:modules/modules.dart';
+import 'package:modules/automodule.dart';
+import 'package:modules/router.dart';
 $imports
 
 Future<void> load() async {
@@ -187,11 +191,11 @@ Future<void> load() async {
 
   Future<void> generateEnum() async {
     final file = File('core/modules/lib/automodule.dart');
-    String content = "";
-    String m = modules.map((x) => "\t${x.name}").join(',\n');
+    String content = '';
+    final String m = modules.map((x) => '\t${x.name}').join(',\n');
 
     content +=
-        """
+        '''
 enum ModuleEnum {
 $m;
 
@@ -202,29 +206,29 @@ $m;
     return null;
   }
 }
-  """;
+  ''';
     await file.writeAsString(content);
   }
 }
 
 Future<void> build() async {
-  _ModuleManager manager = await _loadModules();
+  final _ModuleManager manager = await _loadModules();
   await manager.loadFile();
   await manager.modifyPubspec();
   await manager.generateEnum();
 
   try {
-    final bootstrap = await Process.run("melos", ["bootstrap"]);
+    final bootstrap = await Process.run('melos', ['bootstrap']);
     print(bootstrap.stdout.toString());
   } catch (err) {
-    print("Trying to call 'melos bootstrab' but an error occured");
+    print('Trying to call \'melos bootstrab\' but an error occured');
   }
 }
 
 Future<_ModuleManager> _loadModules() async {
   final file = File(moduleEnv);
   if (!await file.exists()) {
-    print("$moduleEnv not found");
+    print('$moduleEnv not found');
     exit(1);
   }
   dynamic json = await file.readAsString();
@@ -247,19 +251,19 @@ Future<void> enable(ArgResults? res) async => _setModule(res, true);
 
 Future<void> disable(ArgResults? res) async {
   if (res == null) {
-    print("Required module name is missing");
+    print('Required module name is missing');
     return;
   }
   final manager = await _loadModules();
   final name = res.arguments.last;
   final module = manager.get(name);
   if (module == null) {
-    print("Module not found");
+    print('Module not found');
     return;
   }
   if (!manager.dependsOn(name)) {
     print(
-      "You cannot disable this module because there are some modules that depend on this",
+      'You cannot disable this module because there are some modules that depend on this',
     );
     return;
   }
@@ -268,7 +272,7 @@ Future<void> disable(ArgResults? res) async {
 
 Future<void> addModule(ArgResults? res) async {
   if (res == null) {
-    print("res nullo");
+    print('res nullo');
     return;
   }
   final name = res.arguments.last;
@@ -276,7 +280,7 @@ Future<void> addModule(ArgResults? res) async {
   manager.add(name);
   final dir = Directory('$moduleDir/$name');
   if (!(await dir.exists())) {
-    await Process.run("flutter", [
+    await Process.run('flutter', [
       'create',
       name,
       '--template',
@@ -289,13 +293,13 @@ Future<void> addModule(ArgResults? res) async {
 
 Future<void> setDefault(ArgResults? res) async {
   if (res == null) {
-    print("res nullo");
+    print('res nullo');
     return;
   }
   final name = res.arguments.last;
   final manager = await _loadModules();
   if (manager.get(name) == null) {
-    print("There's no module $name in the module list");
+    print('There\'s no module $name in the module list');
     return;
   }
   manager.defaultModule = name;
@@ -306,24 +310,24 @@ Future<void> setDefault(ArgResults? res) async {
 Future<void> listModules(ArgResults? res) async {
   final list = await _loadModules();
   bool curr;
-  print("The possible modules are:");
+  print('The possible modules are:');
   for (int i = 0; i < list.modules.length; i++) {
     final module = list.modules[i];
-    String desc = "";
+    String desc = '';
     if (module.dependencies.isNotEmpty) {
-      desc += "[${module.dependencies.join(", ")}]";
+      desc += '[${module.dependencies.join(', ')}]';
     }
 
     curr = (module.name == list.defaultModule);
     print(
-      "$i) ${curr ? "*" : " "}${module.name.padRight(20)}${module.active ? "enabled " : "disabled"} $desc",
+      '$i) ${curr ? '*' : ' '}${module.name.padRight(20)}${module.active ? 'enabled ' : 'disabled'} $desc',
     );
   }
 }
 
 Future<void> removeModule(ArgResults? res) async {
   if (res == null) {
-    print("res nullo");
+    print('res nullo');
   }
   final name = res!.arguments.last;
   final manager = await _loadModules();

@@ -31,8 +31,9 @@
 import 'package:flutter/widgets.dart';
 import 'signal.dart';
 
-mixin SharedState<T extends StatefulWidget> on State<T> {
-  List<Signal> signals = [];
+mixin StatefullSignal<T extends StatefulWidget> on State<T> {
+  final List<Signal> signals = [];
+  final Map<Signal, Object> _listener = {};
 
   @override
   void initState() {
@@ -48,12 +49,35 @@ mixin SharedState<T extends StatefulWidget> on State<T> {
     for (final state in signals) {
       state.unwatch();
     }
+    for (final MapEntry(:key, :value) in _listener.entries) {
+      key.unwatch(value);
+    }
   }
 
   void _refresh<R>(R param) {
     if (mounted) setState(() {});
   }
 
-  void watch<R>(Signal<R> provider) => provider.watch(_refresh);
-  void unwatch<R>(Signal<R> provider) => provider.unwatch();
+  void watch<R>(Signal<R> provider) {
+    if (!_listener.containsKey(provider)) {
+      _listener[provider] = Object();
+    }
+    provider.watch(_refresh, _listener[provider]!);
+  }
+
+  void unwatch<R>(Signal<R> provider) => _listener.remove(provider);
+}
+
+mixin StatelessSignal on StatelessWidget {
+  void watch<T>(Signal<T> signal) {}
+}
+
+class Prova extends StatelessWidget {
+  const Prova({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    createElement().rebuild(force: true);
+    return const Placeholder();
+  }
 }

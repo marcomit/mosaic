@@ -38,16 +38,16 @@ import 'dart:math';
 /// This semaphore implementation allows up to [permits] concurrent operations
 /// to proceed while queuing additional requests in FIFO order.
 class Semaphore {
-  final int _permits;
-  final Queue<Completer<void>> _waitQueue = Queue();
-  int _available;
-  bool _disposed = false;
-
   Semaphore([this._permits = 1]) : _available = _permits {
     if (_permits < 0) {
       throw ArgumentError.value(_permits, 'permits', 'Must be non-negative');
     }
   }
+
+  final int _permits;
+  final Queue<Completer<void>> _waitQueue = Queue();
+  int _available;
+  bool _disposed = false;
 
   Future<void> acquire() async {
     if (_disposed) throw StateError('Semaphore has been disposed');

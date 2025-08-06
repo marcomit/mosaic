@@ -29,12 +29,12 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 class MosaicException implements Exception {
-  String get name => "MosaicException";
+  const MosaicException(this.message, {this.cause, this.fix});
+
+  String get name => 'MosaicException';
   final String message;
   final String? cause;
   final String? fix;
-
-  const MosaicException(this.message, {this.cause, this.fix});
 
   Map<String, dynamic> _toJson() => {
     'message': message,
@@ -43,52 +43,47 @@ class MosaicException implements Exception {
   };
 
   @override
-  String toString() => "$name ${_toJson()}";
+  String toString() => '$name ${_toJson()}';
 }
 
 class RouterException extends MosaicException {
-  @override
-  String get name => "RouterException";
-
   RouterException(super.message, {super.cause, super.fix});
+  @override
+  String get name => 'RouterException';
 }
 
 class SignalException extends MosaicException {
-  @override
-  String get name => "SignalException";
-
   SignalException(super.message, {super.cause, super.fix});
+  @override
+  String get name => 'SignalException';
 }
 
 /// Exception thrown when module operations fail.
 class ModuleException extends MosaicException {
+  ModuleException(super.message, {this.moduleName, super.cause, super.fix});
   @override
-  String get name => "ModuleException";
+  String get name => 'ModuleException';
 
   final String? moduleName;
 
-  ModuleException(super.message, {this.moduleName, super.cause, super.fix});
-
   @override
-  String toString() => "$name ${moduleName ?? ""} ${_toJson()}";
+  String toString() => '$name ${moduleName ?? ''} ${_toJson()}';
 }
 
 class EventException extends MosaicException {
-  @override
-  String get name => "EventException";
-
   EventException(super.message, {super.fix, super.cause});
+  @override
+  String get name => 'EventException';
 }
 
 class DependencyException extends MosaicException {
-  @override
-  String get name => "DependencyException";
-
   DependencyException(super.message, {super.fix, super.cause});
+  @override
+  String get name => 'DependencyException';
 }
 
 class LoggerException extends MosaicException {
-  @override
-  String get name => "LoggerException";
   LoggerException(super.message, {super.fix, super.cause});
+  @override
+  String get name => 'LoggerException';
 }

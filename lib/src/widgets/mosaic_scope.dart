@@ -1,4 +1,4 @@
-/* 
+/*
 * BSD 3-Clause License
 * 
 * Copyright (c) 2025, Marco Menegazzi
@@ -29,44 +29,35 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-class AsyncState<T, V> {
-  AsyncState(this.builder);
-  final Future<T> Function() builder;
-  V Function()? _loading;
-  V Function(Object?)? _error;
-  V Function(T)? _success;
+import 'package:flutter/widgets.dart';
+import 'package:mosaic/src/events/events.dart';
+import 'package:mosaic/src/routing/route_context.dart';
 
-  Future<T?> fetch() async {
-    try {
-      if (_loading != null) _loading!();
-      final res = await builder();
-      if (_success != null) _success!(res);
-      return res;
-    } catch (err) {
-      if (_error != null) _error!(err);
-    }
-    return null;
-  }
+class MosaicScope extends StatefulWidget {
+  const MosaicScope({super.key});
 
-  AsyncState<T, V> loading(V Function() load) {
-    _loading = load;
-    return this;
-  }
-
-  AsyncState<T, V> success(V Function(T) completed) {
-    _success = completed;
-    return this;
-  }
-
-  AsyncState<T, V> error(V Function(Object?) err) {
-    _error = err;
-    return this;
-  }
+  @override
+  State<MosaicScope> createState() => _MosaicScopeState();
 }
 
-void pr() {
-  AsyncState(() => Future.value(1))
-      .loading(() => 'loading...')
-      .error((err) => 'Errore')
-      .success((d) => 'Data ricevuti');
+class _MosaicScopeState extends State<MosaicScope> {
+  late EventListener<RouteTransitionContext> _listener;
+
+  @override
+  void initState() {
+    super.initState();
+    _listener = events.on<RouteTransitionContext>('router/change', _transit);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  void _transit(EventContext<RouteTransitionContext> ctx) {}
+
+  @override
+  Widget build(BuildContext context) {
+    return const Placeholder();
+  }
 }

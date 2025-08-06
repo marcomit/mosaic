@@ -38,10 +38,11 @@ import 'package:mosaic/src/routing/route_context.dart';
 import 'package:mosaic/src/routing/route_history_entry.dart';
 
 class InternalRouter with Loggable {
+  InternalRouter._internal();
   static final _instance = InternalRouter._internal();
 
   @override
-  List<String> get loggerTags => ["router"];
+  List<String> get loggerTags => ['souter'];
 
   final Semaphore _navigation = Semaphore();
 
@@ -54,15 +55,13 @@ class InternalRouter with Loggable {
   ModuleEnum get current {
     if (_history.isEmpty) {
       throw RouterException(
-        "Current module does not exists",
-        cause: "Stack history has no entries",
-        fix: "Push something before",
+        'Current module does not exists',
+        cause: 'Stack history has no entries',
+        fix: 'Push something before',
       );
     }
     return _history.last.module;
   }
-
-  InternalRouter._internal();
 
   void init(ModuleEnum defaultModule) {
     final entry = RouteHistoryEntry(defaultModule);
@@ -75,7 +74,7 @@ class InternalRouter with Loggable {
 
   Future<void> goto<T>(ModuleEnum moduleName, [T? value]) async {
     if (_disposed) {
-      throw RouterException("Router was disposed");
+      throw RouterException('Router was disposed');
     }
     await _navigation.lock();
     try {
@@ -96,7 +95,7 @@ class InternalRouter with Loggable {
     if (module.state != ModuleLifecycleState.active) {
       throw RouterException(
         'Module ${module.name} is not active',
-        fix: "Activate the module by calling ${module.name}.activate()",
+        fix: 'Activate the module by calling ${module.name}.activate()',
       );
     }
   }
@@ -131,9 +130,9 @@ class InternalRouter with Loggable {
   Module _tryGetModule(ModuleEnum m) {
     if (!moduleManager.activeModules.containsKey(m.name)) {
       throw RouterException(
-        "Module ${m.name} not registered or not active.",
-        cause: "Bad initialization or deactivated by configuration",
-        fix: "try to activate the module ${m.name}",
+        'Module ${m.name} not registered or not active.',
+        cause: 'Bad initialization or deactivated by configuration',
+        fix: 'try to activate the module ${m.name}',
       );
     }
     return moduleManager.activeModules[m.name]!;
@@ -141,39 +140,39 @@ class InternalRouter with Loggable {
 
   void _checkDisposed() {
     if (_disposed) {
-      throw RouterException("Router was disposed");
+      throw RouterException('Router was disposed');
     }
   }
 
   void goBack<T>([T? value]) {
     _checkDisposed();
     if (_history.isEmpty) {
-      throw RouterException("Cannot go back", cause: "Stack history is empty");
+      throw RouterException('Cannot go back', cause: 'Stack history is empty');
     }
 
     info('Before go back ${_history.map((c) => c.module.name)}');
 
     final from = _history.removeLast();
 
-    info("Go back to ${_history.last.module.name}");
+    info('Go back to ${_history.last.module.name}');
 
     _goto(from: _tryGetModule(from.module), params: value);
     if (from.completer.isCompleted) {
       throw RouterException(
-        "Bad state, ${from.module.name} is already completed",
+        'Bad state, ${from.module.name} is already completed',
       );
     }
     from.completer.complete(value);
   }
 
   void clear() {
-    info("Clearing the module ${_current.name}");
+    info('Clearing the module ${_current.name}');
     _current.clear();
   }
 
   void dispose() {
     if (_disposed) {
-      warning("Router already disposed");
+      warning('Router already disposed');
       return;
     }
     _disposed = true;

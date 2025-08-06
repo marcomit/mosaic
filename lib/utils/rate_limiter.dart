@@ -30,11 +30,11 @@
 */
 
 class RateLimiter {
+  RateLimiter({this.maxRate = 1000, this.window = const Duration(seconds: 5)});
+
   final List<DateTime> _timestamps = [];
   final int maxRate;
   final Duration window;
-
-  RateLimiter({this.maxRate = 1000, this.window = const Duration(seconds: 5)});
 
   bool _excedeed() {
     final now = DateTime.now();

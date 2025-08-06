@@ -41,12 +41,12 @@ import 'package:args/args.dart';
 Future<void> init(ArgResults? arg) async {}
 Future<void> create(ArgResults? arg) async {
   if (arg == null) {
-    print("Invalid argument".red);
+    print('Invalid argument'.red);
     exit(1);
   }
   final projectName = arg.arguments.last;
   await downloadGitRepository('marcomit', 'mosaic_starter', projectName);
-  print("Template downloaded".green);
+  print('Template downloaded'.green);
 }
 
 Future<void> downloadGitRepository(
@@ -79,10 +79,10 @@ Future<void> downloadGitRepository(
 
   final destination = Directory(output);
   if (destination.existsSync()) {
-    print('Error: Folder "$output" already exists.');
+    print('Error: Folder \'$output\' already exists.');
     exit(1);
   }
   tempDir.renameSync(output);
 
-  print('Project "$output" created!');
+  print('Project \'$output\' created!');
 }

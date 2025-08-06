@@ -40,6 +40,8 @@ extension on String {
 }
 
 class _Layer {
+  _Layer(this.val, this.children);
+
   String val;
   List<_Layer> children;
 
@@ -51,7 +53,7 @@ class _Layer {
     return true;
   }
 
-  bool get isWildCard => {"*", "#"}.contains(val);
+  bool get isWildCard => {'*', '#'}.contains(val);
 
   bool get containsOnlyLeaf {
     for (final child in children) {
@@ -60,9 +62,7 @@ class _Layer {
     return true;
   }
 
-  String get className => "${val.capitalize()}Node";
-
-  _Layer(this.val, this.children);
+  String get className => '${val.capitalize()}Node';
 
   void extend(Map<String, dynamic> json, [int depth = 0]) {
     for (final key in json.keys) {
@@ -74,9 +74,9 @@ class _Layer {
 
   String? prop([_Layer? parent]) {
     if (isWildCard) return null;
-    String param = "super.topic";
-    if (!isLeaf) param = '"$val"';
-    return "$className get $val => $className($param);";
+    String param = 'super.topic';
+    if (!isLeaf) param = '\'$val\'';
+    return '$className get $val => $className($param);';
   }
 
   @override
@@ -89,31 +89,31 @@ class _Layer {
       final property = child.prop(parent);
 
       if (property != null) props.add(property);
-      if (child.val == "*") {
-        mixins.add("Id");
-      } else if (child.val == "#") {
-        mixins.add("Param");
+      if (child.val == '*') {
+        mixins.add('Id');
+      } else if (child.val == '#') {
+        mixins.add('Param');
       }
     }
 
-    String nodeMixin = "";
+    String nodeMixin = '';
 
     if (mixins.isNotEmpty) {
-      nodeMixin = " with ${mixins.join(', ')}";
+      nodeMixin = ' with ${mixins.join(', ')}';
     }
 
-    String superParam =
-        """(super.topic) {
-    \$("$val");
-  }""";
+    final String superParam =
+        '''(super.topic) {
+    \$('$val');
+  }''';
 
     final classes = [
-      """
+      '''
 class $className extends Segment$nodeMixin {
   ${props.join('\n  ')}
   $className$superParam
 }
-      """,
+      ''',
     ];
 
     for (final child in children) {
@@ -133,7 +133,7 @@ Future<Map<String, dynamic>> _loadEvents() async {
 Future<void> events() async {
   final json = await _loadEvents();
 
-  final _Layer head = _Layer("", []);
+  final _Layer head = _Layer('', []);
   head.extend(json);
 
   final content = head.children.map((c) => c.toString()).join('\n\n');
@@ -142,12 +142,13 @@ Future<void> events() async {
 
   for (final child in head.children) {
     headProps.add(
-      "${child.className} get ${child.val} => ${child.className}('');",
+      '${child.className} get ${child.val} => ${child.className}('
+      ');',
     );
   }
 
-  final generated = File("core/modules/lib/event_tree.dart");
-  await generated.writeAsString("""
+  final generated = File('core/modules/lib/event_tree.dart');
+  await generated.writeAsString('''
 import 'package:modules/chain.dart';
 
 /* WARNING: this is a generated file!!! */
@@ -155,8 +156,8 @@ import 'package:modules/chain.dart';
 $content
 
 mixin HeadNode {
-  ${headProps.join("\n  ")}
+  ${headProps.join('\n  ')}
 }
-""");
-  print("event_tree.dart generated!");
+''');
+  print('event_tree.dart generated!');
 }

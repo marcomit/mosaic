@@ -35,15 +35,15 @@ typedef RouteNodeBuilder =
     Widget Function(BuildContext, RouteTransitionContext);
 
 class RouteNode {
-  final String path;
-  final RouteNodeBuilder builder;
-  final List<RouteNode> routes;
-
   RouteNode({
     required this.path,
     required this.builder,
     this.routes = const [],
   });
+
+  final String path;
+  final RouteNodeBuilder builder;
+  final List<RouteNode> routes;
 
   Map<String, dynamic> parseUrlParams(String params) {
     final res = <String, dynamic>{};

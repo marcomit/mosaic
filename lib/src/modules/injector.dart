@@ -29,8 +29,6 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-import 'dart:math';
-
 import '../events/events.dart';
 import 'modular.dart';
 
@@ -38,12 +36,12 @@ typedef UIInjectorCallback = EventCallback<ModularExtension>;
 typedef UIInjectorListener = EventListener<ModularExtension>;
 
 class UIInjector {
-  static final _instance = UIInjector._internal();
   UIInjector._internal();
-  void inject(String path, ModularExtension extension, [String? id]) {
-    Random r = Random();
-    id ??= r.nextInt(1000).toString();
-    // final topic = [path, id];
+  static final _instance = UIInjector._internal();
+  void inject(String path, ModularExtension extension, [Object? watcher]) {
+    watcher ??= Object();
+    final channel = [path, identityHashCode(watcher)];
+    events.emit<ModularExtension>(channel.join(Events.sep), extension, true);
     // events.extensions.params(topic).emit<ModularExtension>(extension, true);
   }
 

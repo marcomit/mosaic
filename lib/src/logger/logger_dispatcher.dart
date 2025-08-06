@@ -40,13 +40,13 @@ import '../thread_safety/semaphore.dart';
 /// It is used by the Logger class when it dispatch a log.
 /// When the log function of logger is called it execute `secureCall` that it cannot be overrided.
 abstract class LoggerDispatcher {
+  LoggerDispatcher({required this.name});
+
   bool _disposed = false;
   final String name;
   bool active = true;
 
   final LoggerWrapper _wrapper = LoggerWrapper();
-
-  LoggerDispatcher({required this.name});
 
   /// Initialize the LoggerDispatcher
   Future<void> init() async {}
@@ -68,8 +68,8 @@ abstract class LoggerDispatcher {
 }
 
 class ConsoleDispatcher extends LoggerDispatcher {
+  ConsoleDispatcher() : super(name: 'console');
   final _s = Semaphore();
-  ConsoleDispatcher() : super(name: "console");
 
   @override
   Future<void> log(String message, LogType type, List<String> tags) async {
@@ -91,6 +91,12 @@ class ConsoleDispatcher extends LoggerDispatcher {
 /// Such that there's one file (for the same tag) per day.
 /// But its format is defined by the [fileNameRole] that you can pass in the constructor.
 class FileLoggerDispatcher extends LoggerDispatcher {
+  FileLoggerDispatcher({
+    this.path = '',
+    this.relative = true,
+    this.fileNameRole = FileLoggerDispatcher.defaultFileNameRole,
+  }) : super(name: 'file');
+
   final String path;
   final bool relative;
   final Mutex<Map<String, Mutex<File>>> _files = Mutex({});
@@ -98,24 +104,18 @@ class FileLoggerDispatcher extends LoggerDispatcher {
   /// Function that you can modify to choose the name of the file log
   final String Function(String) fileNameRole;
 
-  String get _path => [relative ? Directory.current.path : "", path].join('/');
-
-  FileLoggerDispatcher({
-    this.path = "",
-    this.relative = true,
-    this.fileNameRole = FileLoggerDispatcher.defaultFileNameRole,
-  }) : super(name: "file");
+  String get _path => [relative ? Directory.current.path : '', path].join('/');
 
   static String defaultFileNameRole(String tag) {
     final date = DateTime.now();
 
     String pad(int n, [int len = 2]) => n.toString().padLeft(2, '0');
 
-    return "${tag}_${date.year}_${pad(date.month)}_${pad(date.day)}.log";
+    return '${tag}_${date.year}_${pad(date.month)}_${pad(date.day)}.log';
   }
 
   Future<Mutex<File>> _createIfAbsent(String tag) async {
-    return await _files.use((files) async {
+    return _files.use((files) async {
       if (files.containsKey(tag)) return files[tag]!;
       try {
         final file = File([_path, fileNameRole(tag)].join('/'));
@@ -133,7 +133,7 @@ class FileLoggerDispatcher extends LoggerDispatcher {
 
     try {
       final f = await mutex.lock();
-      await f.writeAsString("$message\n", mode: FileMode.append);
+      await f.writeAsString('$message\n', mode: FileMode.append);
     } finally {
       mutex.release();
     }

@@ -29,6 +29,8 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+import 'package:flutter/widgets.dart';
+
 import '../../exceptions.dart';
 
 import '../events/events.dart';
@@ -57,6 +59,18 @@ import '../events/events.dart';
 /// * [computed] for derived state
 /// * [combine] for combining multiple signals
 class Signal<T> {
+  /// Creates a new signal with the given [initial] value.
+  ///
+  /// The signal will immediately have this value and will notify listeners
+  /// when it changes.
+  ///
+  /// Example:
+  /// ```dart
+  /// final counter = Signal<int>(0);
+  /// final message = Signal<String>('Hello');
+  /// ```
+  Signal(T initial) : _state = initial;
+
   T _state;
   bool _disposed = false;
   final Set<Signal> _derived = {};
@@ -88,18 +102,6 @@ class Signal<T> {
 
   String get _eventChannel =>
       ['shared', 'state', identityHashCode(this)].join(Events.sep);
-
-  /// Creates a new signal with the given [initial] value.
-  ///
-  /// The signal will immediately have this value and will notify listeners
-  /// when it changes.
-  ///
-  /// Example:
-  /// ```dart
-  /// final counter = Signal<int>(0);
-  /// final message = Signal<String>('Hello');
-  /// ```
-  Signal(T initial) : _state = initial;
 
   /// Emits an event to notify all listeners of the current state.
   ///
@@ -144,12 +146,12 @@ class Signal<T> {
   /// See also:
   /// * [unwatch] to remove listeners
   /// * [dispose] to remove all listeners
-  void watch([void Function(T)? callback, Object? watcher]) {
+  Object watch([void Function(T)? callback, Object? watcher]) {
     if (_disposed) {
       throw SignalException(
-        "Called watch after the signal wad disposed.",
-        cause: "Missing unwatch call",
-        fix: "Ensure you unwatch the signal on dispose",
+        'Called watch after the signal wad disposed.',
+        cause: 'Missing unwatch call',
+        fix: 'Ensure you unwatch the signal on dispose',
       );
     }
     watcher ??= Object();
@@ -162,6 +164,7 @@ class Signal<T> {
     );
 
     _listeners[watcher] = l;
+    return watcher;
   }
 
   /// Removes all listeners and cleans up resources.
@@ -381,6 +384,21 @@ class Signal<T> {
   }
 }
 
+class MyWidget extends StatefulWidget {
+  const MyWidget({super.key});
+
+  @override
+  State<MyWidget> createState() => _MyWidgetState();
+}
+
+class _MyWidgetState extends State<MyWidget> {
+  @override
+  Widget build(BuildContext context) {
+    setState(() {});
+    return const Placeholder();
+  }
+}
+
 /// A signal that handles asynchronous operations with built-in loading states.
 ///
 /// AsyncSignal automatically manages loading, success, and error states
@@ -409,26 +427,6 @@ class Signal<T> {
 /// * [autorun]: If true, automatically calls [fetch] during construction
 /// * [multifetch]: If true, allows multiple concurrent fetch operations
 class AsyncSignal<T> extends Signal<AsyncStatus<T>> {
-  /// The function used to fetch data asynchronously.
-  ///
-  /// This function is called by [fetch] to retrieve the data. It should
-  /// return a Future that completes with the desired data or throws
-  /// an error if the operation fails.
-  Future<T> Function() builder;
-
-  /// Whether to automatically start fetching data when the signal is created.
-  ///
-  /// If true, [fetch] will be called immediately during construction.
-  /// If false, you must manually call [fetch] to load data.
-  bool autorun;
-
-  /// Whether to allow multiple concurrent fetch operations.
-  ///
-  /// If false (default), calling [fetch] while already loading will be ignored.
-  /// If true, multiple fetch operations can run simultaneously, with the
-  /// last one to complete setting the final state.
-  bool multifetch;
-
   /// Creates an async signal with the given data [builder] function.
   ///
   /// Parameters:
@@ -452,6 +450,26 @@ class AsyncSignal<T> extends Signal<AsyncStatus<T>> {
     : super(AsyncStatus.stale()) {
     if (autorun) fetch();
   }
+
+  /// The function used to fetch data asynchronously.
+  ///
+  /// This function is called by [fetch] to retrieve the data. It should
+  /// return a Future that completes with the desired data or throws
+  /// an error if the operation fails.
+  Future<T> Function() builder;
+
+  /// Whether to automatically start fetching data when the signal is created.
+  ///
+  /// If true, [fetch] will be called immediately during construction.
+  /// If false, you must manually call [fetch] to load data.
+  bool autorun;
+
+  /// Whether to allow multiple concurrent fetch operations.
+  ///
+  /// If false (default), calling [fetch] while already loading will be ignored.
+  /// If true, multiple fetch operations can run simultaneously, with the
+  /// last one to complete setting the final state.
+  bool multifetch;
 
   /// Executes the builder function and updates the signal's state.
   ///
@@ -520,7 +538,7 @@ class AsyncSignal<T> extends Signal<AsyncStatus<T>> {
     if (state.loading && loading != null) return loading();
     if (state.isError && error != null) return error(state.error);
     if (state.success && success != null) {
-      T? data = state.data;
+      final data = state.data;
       if (data != null) return success(data);
     }
     return orElse();
@@ -550,7 +568,7 @@ class AsyncSignal<T> extends Signal<AsyncStatus<T>> {
   }
 
   @override
-  String toString() => "Signal<$T>($state)";
+  String toString() => 'Signal<$T>($state)';
 }
 
 /// Represents the state of an asynchronous operation.
@@ -573,24 +591,6 @@ class AsyncSignal<T> extends Signal<AsyncStatus<T>> {
 /// }
 /// ```
 class AsyncStatus<T> {
-  /// The data returned by the async operation, if successful.
-  ///
-  /// This will be null unless the operation completed successfully.
-  /// When [success] is true, this field contains the actual result data.
-  final T? data;
-
-  /// Whether the async operation is currently in progress.
-  ///
-  /// True when the operation has started but not yet completed.
-  /// False in all other states (stale, success, error).
-  final bool loading;
-
-  /// The error that occurred during the async operation, if any.
-  ///
-  /// This will be null unless an error occurred during the operation.
-  /// When [isError] is true, this field contains the error object.
-  final Object? error;
-
   /// Creates a new AsyncStatus in the stale state.
   ///
   /// Stale indicates that no operation has been started yet, or that
@@ -647,6 +647,24 @@ class AsyncStatus<T> {
       loading = false,
       error = null;
 
+  /// The data returned by the async operation, if successful.
+  ///
+  /// This will be null unless the operation completed successfully.
+  /// When [success] is true, this field contains the actual result data.
+  final T? data;
+
+  /// Whether the async operation is currently in progress.
+  ///
+  /// True when the operation has started but not yet completed.
+  /// False in all other states (stale, success, error).
+  final bool loading;
+
+  /// The error that occurred during the async operation, if any.
+  ///
+  /// This will be null unless an error occurred during the operation.
+  /// When [isError] is true, this field contains the error object.
+  final Object? error;
+
   /// Whether the async operation completed successfully.
   ///
   /// Returns true when [data] is not null, indicating that the operation
@@ -661,9 +679,9 @@ class AsyncStatus<T> {
 
   @override
   String toString() {
-    if (loading) return "AsyncStatus.loading()";
-    if (isError) return "AsyncStatus.error($error)";
-    if (success) return "AsyncStatus.success($data)";
-    return "AsyncStatus.stale()";
+    if (loading) return 'AsyncStatus.loading()';
+    if (isError) return 'AsyncStatus.error($error)';
+    if (success) return 'AsyncStatus.success($data)';
+    return 'AsyncStatus.stale()';
   }
 }

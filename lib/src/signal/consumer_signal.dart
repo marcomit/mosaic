@@ -29,44 +29,37 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-class AsyncState<T, V> {
-  AsyncState(this.builder);
-  final Future<T> Function() builder;
-  V Function()? _loading;
-  V Function(Object?)? _error;
-  V Function(T)? _success;
+import 'package:flutter/widgets.dart';
+import 'package:mosaic/extensions.dart';
+import 'package:mosaic/src/signal/signal.dart';
 
-  Future<T?> fetch() async {
-    try {
-      if (_loading != null) _loading!();
-      final res = await builder();
-      if (_success != null) _success!(res);
-      return res;
-    } catch (err) {
-      if (_error != null) _error!(err);
-    }
-    return null;
-  }
+class Consumer<T> extends StatefulWidget {
+  const Consumer({super.key, required this.signal, required this.builder});
+  final Signal<T> signal;
+  final Widget Function(BuildContext, Signal<T>) builder;
 
-  AsyncState<T, V> loading(V Function() load) {
-    _loading = load;
-    return this;
-  }
-
-  AsyncState<T, V> success(V Function(T) completed) {
-    _success = completed;
-    return this;
-  }
-
-  AsyncState<T, V> error(V Function(Object?) err) {
-    _error = err;
-    return this;
-  }
+  @override
+  State<Consumer<T>> createState() => _ConsumerState<T>();
 }
 
-void pr() {
-  AsyncState(() => Future.value(1))
-      .loading(() => 'loading...')
-      .error((err) => 'Errore')
-      .success((d) => 'Data ricevuti');
+class _ConsumerState<T> extends State<Consumer<T>> {
+  Object? _listener;
+
+  @override
+  void initState() {
+    super.initState();
+    _listener = widget.signal.watch((_) => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    widget.signal.unwatch(_listener);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    context.watch(widget.signal);
+    return const Placeholder();
+  }
 }

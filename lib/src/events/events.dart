@@ -48,6 +48,9 @@ import '../logger/logger.dart';
 /// });
 /// ```
 class EventContext<T> {
+  /// Creates a new event context.
+  const EventContext(this.data, this.name, this.params);
+
   /// Data passed with the event, may be null.
   final T? data;
 
@@ -56,9 +59,6 @@ class EventContext<T> {
 
   /// Parameters extracted from the path when using wildcards (`*` or `#`).
   final List<String> params;
-
-  /// Creates a new event context.
-  const EventContext(this.data, this.name, this.params);
 
   @override
   String toString() =>
@@ -83,14 +83,14 @@ class EventContext<T> {
 /// events.on('user/#', callback);
 /// ```
 class EventListener<T> {
+  /// Creates a new event listener.
+  EventListener(this.path, this.callback);
+
   /// Channel representation as a list of segments.
   final List<String> path;
 
   /// Callback invoked when a matching event is emitted.
   final EventCallback<T> callback;
-
-  /// Creates a new event listener.
-  EventListener(this.path, this.callback);
 
   /// Checks if a given channel matches this listener.
   ///
@@ -98,10 +98,10 @@ class EventListener<T> {
   bool _verify(List<String> channel) {
     if (path.isEmpty && channel.isEmpty) return true;
 
-    int len = min(channel.length, path.length);
+    final len = min(channel.length, path.length);
     for (int i = 0; i < len; i++) {
-      if (path[i] == "#") return true;
-      if (path[i] == "*") continue;
+      if (path[i] == '#') return true;
+      if (path[i] == '*') continue;
       if (channel[i] != path[i]) return false;
     }
     return channel.length == path.length;
@@ -110,7 +110,7 @@ class EventListener<T> {
   /// Extracts dynamic parameters from the event path
   /// when using `*` or `#` wildcards.
   List<String> _getParams(List<String> channel) {
-    List<String> res = [];
+    final List<String> res = [];
     int pathIndex = 0;
 
     for (int i = 0; i < channel.length && pathIndex < path.length; i++) {
@@ -157,16 +157,16 @@ typedef EventCallback<T> = void Function(EventContext<T>);
 /// events.deafen(listener);
 /// ```
 class Events {
+  Events._internal();
+
   /// Segment separator for channels (default: `/`).
-  static String sep = "/";
+  static String sep = '/';
 
   static final _instance = Events._internal();
 
   final List<EventListener> _listeners = [];
 
   final Map<String, dynamic> _retained = {};
-
-  Events._internal();
 
   /// Registers a listener on a specific channel.
   ///
@@ -190,7 +190,7 @@ class Events {
   /// });
   /// ```
   EventListener<T> on<T>(String channel, EventCallback<T> callback) {
-    if (channel.isEmpty) throw EventException("Channel cannot be empty");
+    if (channel.isEmpty) throw EventException('Channel cannot be empty');
 
     final listener = EventListener<T>(channel.split(sep), callback);
 
@@ -198,7 +198,7 @@ class Events {
 
     _listeners.add(listener);
     logger.info(
-      "Registered listener for '$channel' (${_listeners.length} total)",
+      'Registered listener for \'$channel\' (${_listeners.length} total)',
       ['events'],
     );
     return listener;
@@ -222,7 +222,7 @@ class Events {
         listener.callback(context);
       } catch (e) {
         logger.error(
-          "Error delivering retained event '$route' to listener: $e",
+          'Error delivering retained event \'$route\' to listener: $e',
           ['events'],
         );
       }
@@ -251,12 +251,12 @@ class Events {
   /// ```
   void emit<T>(String channel, [T? data, bool retain = false]) {
     if (channel.isEmpty) {
-      logger.warning("Attempted to emit event on empty channel", ['events']);
+      logger.warning('Attempted to emit event on empty channel', ['events']);
       return;
     }
 
     final path = channel.split(sep);
-    logger.info("Emitting '$channel'${retain ? ' (retained)' : ''}", [
+    logger.info('Emitting \'$channel\'${retain ? ' (retained)' : ''}', [
       'events',
     ]);
 
@@ -288,10 +288,12 @@ class Events {
           notifiedCount++;
         }
       } catch (e) {
-        logger.error("Error in event listener for '$channel': $e", ['events']);
+        logger.error('Error in event listener for \'$channel\': $e', [
+          'events',
+        ]);
       }
     }
-    logger.debug("Notified $notifiedCount listeners for '$channel'", [
+    logger.debug('Notified $notifiedCount listeners for \'$channel\'', [
       'events',
     ]);
   }
@@ -309,11 +311,11 @@ class Events {
   void deafen<T>(EventListener<T> listener) {
     final wasRemoved = _listeners.remove(listener);
     if (wasRemoved) {
-      logger.info("Removed listener (${_listeners.length} remaining)", [
+      logger.info('Removed listener (${_listeners.length} remaining)', [
         'events',
       ]);
     } else {
-      logger.warning("Attempted to remove non-existent listener", ['events']);
+      logger.warning('Attempted to remove non-existent listener', ['events']);
     }
   }
 
@@ -324,11 +326,11 @@ class Events {
   void pop() {
     if (_listeners.isNotEmpty) {
       _listeners.removeLast();
-      logger.info("Popped listener (${_listeners.length} remaining)", [
+      logger.info('Popped listener (${_listeners.length} remaining)', [
         'events',
       ]);
     } else {
-      logger.warning("Attempted to pop from empty listener list", ['events']);
+      logger.warning('Attempted to pop from empty listener list', ['events']);
     }
   }
 
@@ -344,7 +346,7 @@ class Events {
     _retained.clear();
 
     logger.info(
-      "Cleared $listenerCount listeners and $retainedCount retained events",
+      'Cleared $listenerCount listeners and $retainedCount retained events',
       ['events'],
     );
   }
@@ -356,7 +358,7 @@ class Events {
   void clearRetained() {
     final count = _retained.length;
     _retained.clear();
-    logger.info("Cleared $count retained events", ['events']);
+    logger.info('Cleared $count retained events', ['events']);
   }
 
   // Returns the number of registered listeners.

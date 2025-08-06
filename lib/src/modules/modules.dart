@@ -66,6 +66,10 @@ enum ModuleLifecycleState {
 /// Contains a widget and a completer for resolving futures when the
 /// widget is popped from the stack.
 class InternalRoute<T> {
+  InternalRoute(this.completer, this.widget, {Map<String, dynamic>? metadata})
+    : metadata = metadata ?? {},
+      createdAt = DateTime.now();
+
   /// Completer used to resolve the future when this route is popped.
   final Completer<T> completer;
 
@@ -77,10 +81,6 @@ class InternalRoute<T> {
 
   /// Timestamp when this route was created.
   final DateTime createdAt;
-
-  InternalRoute(this.completer, this.widget, {Map<String, dynamic>? metadata})
-    : metadata = metadata ?? {},
-      createdAt = DateTime.now();
 }
 
 /// Base class for application modules with comprehensive lifecycle management.
@@ -135,6 +135,16 @@ class InternalRoute<T> {
 /// All module operations are thread-safe and can be called from any isolate.
 /// Internal state changes are synchronized to prevent race conditions.
 abstract class Module with Loggable {
+  /// Creates a new module with the specified configuration.
+  ///
+  /// **Parameters:**
+  /// * [name] - Unique identifier for this module
+  /// * [fullScreen] - Whether to display in full screen mode
+  Module({required this.name, this.fullScreen = false}) {
+    _stateLock.complete();
+    info('Module $name created');
+  }
+
   /// Dependency injection container for this module.
   ///
   /// Each module has its own isolated DI container to prevent dependencies
@@ -188,7 +198,7 @@ abstract class Module with Loggable {
 
   /// Current navigation stack as an iterable of widgets.
   ///
-  /// Each widget represents a "page" within this module's internal navigation.
+  /// Each widget represents a 'page' within this module's internal navigation.
   Iterable<Widget> get stack => _stack.map((m) => m.widget);
 
   /// Number of items currently in the navigation stack.
@@ -196,16 +206,6 @@ abstract class Module with Loggable {
 
   /// Whether the navigation stack is empty.
   bool get hasStack => _stack.isNotEmpty;
-
-  /// Creates a new module with the specified configuration.
-  ///
-  /// **Parameters:**
-  /// * [name] - Unique identifier for this module
-  /// * [fullScreen] - Whether to display in full screen mode
-  Module({required this.name, this.fullScreen = false}) {
-    _stateLock.complete();
-    info('Module $name created');
-  }
 
   /// Builds the main widget for this module.
   ///
@@ -461,7 +461,7 @@ abstract class Module with Loggable {
   Future<T> push<T>(Widget widget) {
     final entry = InternalRoute(Completer<T>(), widget);
     _stack.add(entry);
-    logger.info("$name PUSH ${_stack.length}", ["router"]);
+    logger.info('$name PUSH ${_stack.length}', ['router']);
     events.emit<String>(['router', 'push'].join(Events.sep), '');
     return entry.completer.future;
   }
@@ -479,7 +479,7 @@ abstract class Module with Loggable {
   void pop<T>([T? value]) {
     if (_stack.isEmpty) return;
     final c = _stack.removeLast().completer;
-    logger.info("$name POP ${_stack.length}", ["router"]);
+    logger.info('$name POP ${_stack.length}', ['router']);
     events.emit<int>(['router', 'pop'].join(Events.sep), 1);
     c.complete(value);
   }

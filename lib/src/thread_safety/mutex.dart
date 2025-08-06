@@ -46,14 +46,14 @@ import 'semaphore.dart';
 /// });
 /// ```
 class Mutex<T> {
+  Mutex(this._data);
+
   /// The wrapped value
   /// It is private to prevent raw modification
   T _data;
 
   /// _s semaphore is used to lock the access to the data
   final Semaphore _s = Semaphore();
-
-  Mutex(this._data);
 
   /// Method to set the new value
   Future<void> set(T value) async {
@@ -63,7 +63,7 @@ class Mutex<T> {
   }
 
   /// Method to get the current value
-  Future<T> get() async => await use((d) async => d);
+  Future<T> get() => use((d) async => d);
 
   /// Method to handle data
   Future<V> use<V>(Future<V> Function(T) callback) async {
