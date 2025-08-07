@@ -72,7 +72,7 @@ class InternalRouter with Loggable {
 
   void pop<T>([T? value]) => _current.pop(value);
 
-  Future<void> goto<T>(ModuleEnum moduleName, [T? value]) async {
+  Future<void> go<T>(ModuleEnum moduleName, [T? value]) async {
     if (_disposed) {
       throw RouterException('Router was disposed');
     }

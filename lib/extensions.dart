@@ -33,21 +33,23 @@ import 'package:flutter/widgets.dart';
 import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 import 'package:mosaic/src/modules/automodule.dart';
 import 'package:mosaic/src/routing/router.dart';
+import 'package:mosaic/src/signal/consumer_signal.dart';
 import 'package:mosaic/src/signal/signal.dart';
 
 extension RouteExtension on BuildContext {
   Future<T> push<T>(Widget page) => router.push(page);
   void pop<T>([T? value]) => router.pop(value);
 
-  void go<T>(ModuleEnum name, [T? value]) => router.goto(name, value);
+  void go<T>(ModuleEnum name, [T? value]) => router.go(name, value);
   void goBack<T>([T? value]) => router.goBack(value);
-}
-
-extension SignalExtension on BuildContext {
-  void watch<T>(Signal<T> signal) => signal.watch((_) {}, this);
-  void unwatch<T>(Signal<T> signal) => signal.unwatch(this);
 }
 
 extension DependencyExtension on BuildContext {
   T get<T extends Object>() => global.get<T>();
+}
+
+extension SignalWatchExtension<T> on Signal<T> {
+  Widget when(Widget Function(BuildContext, T) builder) {
+    return Watch(signal: this, builder: builder);
+  }
 }

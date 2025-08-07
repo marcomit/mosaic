@@ -30,25 +30,48 @@
 */
 
 import 'package:flutter/widgets.dart';
-import 'package:mosaic/extensions.dart';
-import 'package:mosaic/src/signal/signal.dart';
+import 'package:mosaic/mosaic.dart';
 
-class Consumer<T> extends StatefulWidget {
-  const Consumer({super.key, required this.signal, required this.builder});
+/// Watches a [Signal] and rebuilds when its value changes.
+///
+/// This widget automatically subscribes to signal changes and rebuilds
+/// the UI when the signal's state is updated.
+///
+/// *Example:*
+/// ```dart
+/// Watch<int>(
+///   signal: counter,
+///   builder: (context, value) => Text('Count: $value'),
+/// )
+/// ```
+///
+/// *Note:* Use this widget to rebuild only the necessary widgets,
+/// avoiding update expensive widgets.
+class Watch<T> extends StatefulWidget {
+  const Watch({super.key, required this.signal, required this.builder});
   final Signal<T> signal;
-  final Widget Function(BuildContext, Signal<T>) builder;
+  final Widget Function(BuildContext, T) builder;
 
   @override
-  State<Consumer<T>> createState() => _ConsumerState<T>();
+  State<Watch<T>> createState() => _WatchState<T>();
 }
 
-class _ConsumerState<T> extends State<Consumer<T>> {
+class _WatchState<T> extends State<Watch<T>> {
   Object? _listener;
 
   @override
   void initState() {
     super.initState();
-    _listener = widget.signal.watch((_) => setState(() {}));
+    _setListener();
+  }
+
+  @override
+  void didUpdateWidget(covariant Watch<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.signal != widget.signal) {
+      oldWidget.signal.unwatch(_listener);
+      _setListener();
+    }
   }
 
   @override
@@ -57,9 +80,17 @@ class _ConsumerState<T> extends State<Consumer<T>> {
     super.dispose();
   }
 
+  void _setListener() {
+    _listener = widget.signal.watch(_rebuild);
+  }
+
+  void _rebuild(_) {
+    if (!mounted || !context.mounted) return;
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    context.watch(widget.signal);
-    return const Placeholder();
+    return widget.builder(context, widget.signal.state);
   }
 }

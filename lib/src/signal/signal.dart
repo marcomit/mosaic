@@ -33,7 +33,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../exceptions.dart';
 
-import '../events/events.dart';
+typedef SignalCallback<T> = void Function(T);
 
 /// A reactive state container that notifies listeners when its value changes.
 ///
@@ -73,9 +73,9 @@ class Signal<T> {
 
   T _state;
   bool _disposed = false;
-  final Set<Signal> _derived = {};
+  final Map<Object, Signal> _derived = {};
   bool _shouldNotify = true;
-  final Map<Object, EventListener<T>> _listeners = {};
+  final Map<Object, SignalCallback<T>> _listeners = {};
 
   /// The current value of this signal.
   ///
@@ -96,28 +96,20 @@ class Signal<T> {
   /// is sent and listeners are not called.
   set state(T newValue) {
     if (_state == newValue) return;
+    onChanged(_state, newValue);
     _state = newValue;
     if (_shouldNotify) notify();
   }
 
-  String get _eventChannel =>
-      ['shared', 'state', identityHashCode(this)].join(Events.sep);
-
-  /// Emits an event to notify all listeners of the current state.
-  ///
-  /// This method manually triggers notifications to all registered listeners
-  /// with the current state value. It's automatically called when the state
-  /// changes, but can be called manually if needed.
-  ///
-  /// Example:
-  /// ```dart
-  /// final signal = Signal<int>(5);
-  /// signal.notify(); // Manually trigger notifications
-  /// ```
-  ///
-  /// **Note:** This uses the Mosaic event system with retained messages,
-  /// so new listeners will immediately receive the current state.
-  void notify() => events.emit<T>(_eventChannel, _state, true);
+  void notify() {
+    for (final listener in _listeners.values) {
+      try {
+        listener(_state);
+      } catch (err) {
+        // Log error without blocking other listeners
+      }
+    }
+  }
 
   /// Registers a listener that will be called whenever this signal's state changes.
   ///
@@ -146,24 +138,20 @@ class Signal<T> {
   /// See also:
   /// * [unwatch] to remove listeners
   /// * [dispose] to remove all listeners
-  Object watch([void Function(T)? callback, Object? watcher]) {
+  Object watch(SignalCallback callback, [Object? watcher]) {
     if (_disposed) {
       throw SignalException(
-        'Called watch after the signal wad disposed.',
+        'Called watch after the signal was disposed.',
         cause: 'Missing unwatch call',
         fix: 'Ensure you unwatch the signal on dispose',
       );
     }
     watcher ??= Object();
 
-    if (_listeners.containsKey(watcher)) return;
+    if (_listeners.containsKey(watcher)) return watcher;
 
-    final l = events.on<T>(
-      _eventChannel,
-      (ctx) => _handleStateChange(ctx, callback),
-    );
+    _listeners[watcher] = callback;
 
-    _listeners[watcher] = l;
     return watcher;
   }
 
@@ -193,24 +181,14 @@ class Signal<T> {
   /// * [unwatch] to remove individual listeners
   void dispose() {
     if (_disposed) return;
-    for (final listener in _listeners.values) {
-      events.deafen(listener);
-    }
-    for (final sig in _derived) {
+
+    _listeners.clear();
+
+    for (final sig in _derived.values) {
       sig.dispose();
     }
     _derived.clear();
-    _listeners.clear();
     _disposed = true;
-  }
-
-  void _handleStateChange(EventContext<T> ctx, void Function(T)? callback) {
-    final T? v = ctx.data;
-    if (v == null) return;
-    final old = _state;
-    state = v;
-    if (callback != null) callback(state);
-    onChanged(old, state);
   }
 
   /// Override this method to react to state changes.
@@ -268,8 +246,7 @@ class Signal<T> {
   /// * [dispose] to remove all listeners
   void unwatch([Object? watcher]) {
     final id = watcher ?? Object();
-    final l = _listeners.remove(id);
-    if (l != null) events.deafen(l);
+    _listeners.remove(id);
   }
 
   /// Returns the current state value.
@@ -352,11 +329,11 @@ class Signal<T> {
   Signal<R> computed<R>(R Function(T) compute) {
     final computedSignal = Signal(compute(_state));
 
-    watch((value) {
+    final key = watch((value) {
       computedSignal.state = compute(value);
     });
 
-    _derived.add(computedSignal);
+    _derived[key] = computedSignal;
 
     return computedSignal;
   }
@@ -371,14 +348,15 @@ class Signal<T> {
   Signal<R> combine<R, U>(Signal<U> other, R Function(T, U) combinator) {
     final combined = Signal(combinator(_state, other._state));
 
-    void update() {
+    void update(_) {
       combined.state = combinator(_state, other._state);
     }
 
-    watch((_) => update());
-    other.watch((_) => update());
+    final key = watch(update);
+    final otherKey = other.watch(update);
 
-    _derived.add(combined);
+    _derived[key] = combined;
+    other._derived[otherKey] = combined;
 
     return combined;
   }
