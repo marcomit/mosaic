@@ -52,6 +52,7 @@ class _MosaicScopeState extends State<MosaicScope> {
   @override
   void dispose() {
     super.dispose();
+    events.deafen(_listener);
   }
 
   void _transit(EventContext<RouteTransitionContext> ctx) {}

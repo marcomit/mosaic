@@ -114,7 +114,7 @@ class IMC {
 
   void _checkDispose() {
     if (_disposed) {
-      throw ImcException("Operation not permitted", cause: "Object disposed");
+      throw ImcException('Operation not permitted', cause: 'Object disposed');
     }
   }
 
@@ -145,8 +145,8 @@ class IMC {
     _checkDispose();
     if (!_container.contains<T>()) {
       throw ImcException(
-        "Contract $T not found",
-        fix: "Try to add it using put<$T>(instance)",
+        'Contract $T not found',
+        fix: 'Try to add it using put<$T>(instance)',
       );
     }
     return _container.get<T>();
@@ -225,7 +225,7 @@ class IMC {
     final [name, act] = action.split('.');
 
     if (!_calls.containsKey(name)) {
-      throw ImcException("Unknown module $name");
+      throw ImcException('Unknown module $name');
     }
     if (!_calls[name]!.containsKey(act)) {
       throw ImcException("There's not actions $act in module $name");
@@ -234,18 +234,18 @@ class IMC {
     final context = ImcContext(params);
 
     if (typed.params is! TParams) {
-      throw ImcException("Expected params $TParams, got ${typed.params}");
+      throw ImcException('Expected params $TParams, got ${typed.params}');
     }
     if (typed.result is! TResult) {
-      throw ImcException("Expected result $TResult, got ${typed.result}");
+      throw ImcException('Expected result $TResult, got ${typed.result}');
     }
 
     final result = await typed.callback(context);
     if (result is! TResult) {
       throw ImcException(
-        "Mismatch return type",
+        'Mismatch return type',
         cause:
-            "Your expected type is $TResult but the actual type is ${result.runtimeType}",
+            'Your expected type is $TResult but the actual type is ${result.runtimeType}',
       );
     }
     return result;

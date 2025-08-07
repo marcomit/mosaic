@@ -31,7 +31,7 @@
 import 'package:flutter/widgets.dart';
 import 'signal.dart';
 
-mixin StatefullSignal<T extends StatefulWidget> on State<T> {
+mixin StatefulSignal<T extends StatefulWidget> on State<T> {
   final List<Signal> signals = [];
   final Map<Signal, Object> _listener = {};
 

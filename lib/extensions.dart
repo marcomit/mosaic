@@ -30,7 +30,6 @@
 */
 
 import 'package:flutter/widgets.dart';
-import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 import 'package:mosaic/src/modules/automodule.dart';
 import 'package:mosaic/src/routing/router.dart';
 import 'package:mosaic/src/signal/consumer_signal.dart';
