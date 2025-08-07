@@ -30,7 +30,6 @@
 */
 
 import 'package:flutter/widgets.dart';
-import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 import 'package:mosaic/src/modules/automodule.dart';
 import 'package:mosaic/src/routing/router.dart';
 import 'package:mosaic/src/signal/signal.dart';
@@ -48,6 +47,13 @@ extension SignalExtension on BuildContext {
   void unwatch<T>(Signal<T> signal) => signal.unwatch(this);
 }
 
-extension DependencyExtension on BuildContext {
-  T get<T extends Object>() => global.get<T>();
-}
+// extension DependencyExtension on BuildContext {
+//   T get<T extends Object>() => global.get<T>();
+//
+//   void pr() {
+//     final value = dependOnInheritedWidgetOfExactType();
+//     value.renderObjectAttachingChild.rebuild(force: true);
+//     final el = Element();
+//     el.markNeedsBuild();
+//   }
+// }

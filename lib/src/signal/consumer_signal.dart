@@ -30,11 +30,27 @@
 */
 
 import 'package:flutter/widgets.dart';
-import 'package:mosaic/extensions.dart';
+import 'package:mosaic/src/signal/shared_state.dart';
 import 'package:mosaic/src/signal/signal.dart';
 
+/// This is a wrapper that wraps a [StatelessWidget] and listen changes of the [Signal]
+///
+/// *Params:*
+///   - [signal] The signal state that listen changes
+///   - [builder] Callback that returns the child and it's rebuilt each time the [signal] changes
+///
+/// *Example:*
+/// ```dart
+/// // Sample counter signal
+/// final counter = Signal(0);
+/// ...
+/// Widget build(BuildContext context) {
+///   return Consumer(counter, (context, state) => Text('Current value ${state()}'));
+/// }
+/// ```
+/// This is an helpful widget that avoid writing all the boilerplate for listening a signal change
 class Consumer<T> extends StatefulWidget {
-  const Consumer({super.key, required this.signal, required this.builder});
+  const Consumer(this.signal, {super.key, required this.builder});
   final Signal<T> signal;
   final Widget Function(BuildContext, Signal<T>) builder;
 
@@ -42,24 +58,13 @@ class Consumer<T> extends StatefulWidget {
   State<Consumer<T>> createState() => _ConsumerState<T>();
 }
 
-class _ConsumerState<T> extends State<Consumer<T>> {
-  Object? _listener;
-
+class _ConsumerState<T> extends State<Consumer<T>> with StatefulSignal {
   @override
   void initState() {
     super.initState();
-    _listener = widget.signal.watch((_) => setState(() {}));
+    watch(widget.signal);
   }
 
   @override
-  void dispose() {
-    widget.signal.unwatch(_listener);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    context.watch(widget.signal);
-    return const Placeholder();
-  }
+  Widget build(BuildContext context) => widget.builder(context, widget.signal);
 }

@@ -135,6 +135,10 @@ class Signal<T> {
   /// // Basic watching
   /// counter.watch((value) => print('New value: $value'));
   ///
+  /// // Basic watch/unwatch changes
+  /// final listener = counter.watch((value) => print('New value: $value'));
+  /// counter.unwatch(listener);
+  ///
   /// // With custom watcher for cleanup
   /// final myWatcher = Object();
   /// counter.watch((value) => updateUI(value), myWatcher);
@@ -156,7 +160,8 @@ class Signal<T> {
     }
     watcher ??= Object();
 
-    if (_listeners.containsKey(watcher)) return;
+    // Listener already registered for this watcher
+    if (_listeners.containsKey(watcher)) return watcher;
 
     final l = events.on<T>(
       _eventChannel,
