@@ -29,6 +29,7 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+import 'dart:async';
 import 'dart:math';
 
 import 'package:mosaic/exceptions.dart';
@@ -202,6 +203,32 @@ class Events {
       ['events'],
     );
     return listener;
+  }
+
+  /// Rigisters a listener on a specific channel and use it only one time.
+  ///
+  /// Parameters:
+  /// * [channel]: Event channel pattern (see [on] method for clarification)
+  /// * [callback] Function to call when matching events are emitted
+  ///
+  /// When an event match the channel it runs the callback and remove the listener (use once)
+  /// You can use the method like [on] method
+  ///
+  /// Example:
+  /// ```dart
+  /// events.once<int>('counter/add', (context) {
+  ///   print('The counter is incremented ${context.data}');
+  /// })
+  /// ```
+  void once<T>(String channel, EventCallback<T> callback) {
+    final Completer<void> completer = Completer();
+
+    final listener = on(channel, (EventContext<T> ctx) {
+      callback(ctx);
+      completer.complete();
+    });
+
+    completer.future.then((_) => deafen(listener));
   }
 
   void _deliverRetainedEvents<T>(EventListener<T> listener, String channel) {
