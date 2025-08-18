@@ -30,53 +30,97 @@
 */
 
 import 'package:flutter/material.dart';
-import 'package:mosaic/src/events/events.dart';
-import 'package:mosaic/src/modules/modules.dart';
+
+import 'package:mosaic/mosaic.dart';
+import 'package:mosaic/src/events/events_mixin.dart';
+import 'package:mosaic/src/modules/module_manager.dart';
 import 'package:mosaic/src/routing/route_context.dart';
 
-class MosaicApp extends StatefulWidget {
-  const MosaicApp({super.key, required this.modules, this.defaultModule});
-
-  final List<Module> modules;
-  final String? defaultModule;
+class MosaicScope extends StatefulWidget {
+  const MosaicScope({super.key});
 
   @override
-  State<MosaicApp> createState() => _MosaicAppState();
+  State<MosaicScope> createState() => _MosaicScopeState();
 }
 
-class _MosaicAppState extends State<MosaicApp> {
-  final List<EventListener> _listeners = [];
+class _MosaicScopeState extends State<MosaicScope> with Admissible {
+  int _currentIndex = -1;
+  List<Widget> modules = [];
+  String? get _currentModule => moduleManager.currentModule;
+
+  set _currentModule(String? value) {
+    moduleManager.currentModule = value;
+  }
+
+  void _triggerListener(RouteTransitionContext ctx) {
+    if (_currentModule == null) return;
+    final module = moduleManager.activeModules[_currentModule];
+    if (module == null) return;
+    module.onActive(ctx);
+  }
 
   @override
   void initState() {
     super.initState();
-    final change = events.on<RouteTransitionContext>('router/change', _refresh);
-    final push = events.on<RouteTransitionContext>('router/push', _refresh);
-    final pop = events.on<RouteTransitionContext>('router/pop', _refresh);
-    _listeners.add(change);
-    _listeners.add(push);
-    _listeners.add(pop);
+
+    _currentModule = moduleManager.defaultModule;
+    _setIndex();
+
+    on<Key>('router/push', _refresh);
+    on<Key>('router/pop', _refresh);
+    on<RouteTransitionContext>('router/change/*', changeRoute);
+
+    for (final module in moduleManager.activeModules.values) {
+      modules.add(module.build(context));
+    }
   }
 
-  @override
-  void dispose() {
-    _listeners.forEach(events.deafen);
-    super.dispose();
+  void changeRoute(EventContext<RouteTransitionContext> ctx) {
+    if (!context.mounted) return;
+    final transition = ctx.data;
+
+    if (transition == null) return;
+
+    _currentModule = ctx.params[0];
+
+    _triggerListener(transition);
+    _setIndex();
+    _refresh(ctx);
   }
 
   void _refresh<T>(EventContext<T> ctx) {
     if (mounted) setState(() {});
   }
 
+  void _setIndex() {
+    final keys = moduleManager.activeModules.keys;
+    for (int i = 0; i < keys.length; i++) {
+      if (_currentModule == keys.elementAt(i)) {
+        _currentIndex = i;
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final listModules = moduleManager.activeModules.values.toList();
+
     return Scaffold(
-      body: IndexedStack(children: widget.modules.map(moduleEntry).toList()),
+      body: IndexedStack(
+        index: _currentModule == null ? 0 : _currentIndex + 1,
+        children: [defaultPage(), ...listModules.indexed.map(stack)],
+      ),
     );
   }
 
-  Widget moduleEntry(Module module) {
-    final children = [module.build(context), ...module.stack];
+  Widget stack((int, Module) tuple) {
+    final (index, module) = tuple;
+    final children = [modules[index], ...module.stack];
+    if (children.isEmpty) return const SizedBox();
     return IndexedStack(index: children.length - 1, children: children);
+  }
+
+  Widget defaultPage() {
+    return const Center(child: Text('No module selected'));
   }
 }

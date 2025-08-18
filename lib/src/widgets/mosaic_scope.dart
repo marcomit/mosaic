@@ -29,86 +29,30 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:mosaic/mosaic.dart';
-import 'package:mosaic/src/events/events_mixin.dart';
-import 'package:mosaic/src/routing/route_context.dart';
 
-class MosaicScope extends StatefulWidget {
-  const MosaicScope({super.key});
-
-  @override
-  State<MosaicScope> createState() => _MosaicScopeState();
-}
-
-class _MosaicScopeState extends State<MosaicScope> with Admissible {
-  final _lock = Semaphore();
-  @override
-  void initState() {
-    super.initState();
-    on<RouteTransitionContext>('router/change/*', _changeRoute);
-    on<RouteTransitionContext>('router/push', _transit);
-    on<RouteTransitionContext>('router/pop', _transit);
-  }
-
-  void _transit<T>(EventContext<T> ctx) async {
-    if (!mounted || !context.mounted) return;
-    await _lock.acquire();
-    setState(() {});
-    _lock.release();
-  }
-
-  void _changeRoute(EventContext<RouteTransitionContext> ctx) {
-    final transition = ctx.data;
-    if (transition == null) return;
-    final target = transition.to;
-    target.onActive(transition);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
-  }
-}
-
-class MyWidget extends StatefulWidget {
-  const MyWidget({super.key});
-
-  @override
-  State<MyWidget> createState() => _MyWidgetState();
-}
-
-class _MyWidgetState extends State<MyWidget> {
-  @override
-  Widget build(BuildContext context) {
-    return Navigator(pages: [], onDidRemovePage: (page) {});
-  }
-}
-
-class ModulePage<T extends Object> extends Page<T> {
-  const ModulePage({super.key, required this.moduleName, required this.child});
-
-  final String moduleName;
-  final Widget child;
-
-  @override
-  Route<T> createRoute(BuildContext context) {
-    return PageRouteBuilder(
-      settings: this,
-      pageBuilder: (context, animation, secondaryAnimation) => child,
-    );
-  }
-}
-
-class ModuleRouteBuilder extends PageRouteBuilder {
-  ModuleRouteBuilder({
-    super.settings,
-    super.requestFocus,
-    super.pageBuilder,
-    super.transitionsBuilder,
-    super.transitionDuration,
-    super.reverseTransitionDuration,
+class MosaicApp extends MaterialApp {
+  const MosaicApp({
+    super.key,
+    required this.modules,
+    required this.initialModule,
   });
+  final String initialModule;
+  final List<Module> modules;
 }
 
-class ModuleRoute<T> extends Route<T> {}
+class ModularRoute {
+  ModularRoute(this.path, this.builder, this.routes);
+
+  final String path;
+  final Widget Function(BuildContext) builder;
+  final List<InternalRoute> routes;
+}
+
+
+
+void test() {
+  runApp(MaterialApp.router(routeInformationParser: RouteInformation(),))
+  // runApp(const MosaicApp(modules: [], initialModule: ''));
+}

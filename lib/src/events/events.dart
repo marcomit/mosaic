@@ -205,7 +205,7 @@ class Events {
     return listener;
   }
 
-  /// Rigisters a listener on a specific channel and use it only one time.
+  /// Registers a listener on a specific channel and use it only one time.
   ///
   /// Parameters:
   /// * [channel]: Event channel pattern (see [on] method for clarification)
@@ -229,6 +229,26 @@ class Events {
     });
 
     completer.future.then((_) => deafen(listener));
+  }
+
+  /// Waits the event and return the data received.
+  ///
+  /// Parameters:
+  /// * [channel]: is the channel of the event
+  ///
+  /// Example:
+  /// ```dart
+  /// final user = events.wait<User>('user/update');
+  /// ```
+  Future<T> wait<T>(String channel) {
+    final data = Completer<T>();
+
+    events.once<T>(channel, (ctx) {
+      if (ctx.data == null) return;
+      data.complete(ctx.data);
+    });
+
+    return data.future;
   }
 
   void _deliverRetainedEvents<T>(EventListener<T> listener, String channel) {
