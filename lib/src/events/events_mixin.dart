@@ -49,7 +49,7 @@ import 'events.dart';
 /// }
 /// ```
 /// Listeners are defened automatically on dispose.
-mixin Listenable<T extends StatefulWidget> on State<T> {
+mixin Admissible<T extends StatefulWidget> on State<T> {
   final List<EventListener> _listeners = [];
 
   EventListener<E> on<E>(String channel, EventCallback<E> callback) {

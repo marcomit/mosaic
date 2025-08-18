@@ -42,7 +42,7 @@ class InternalRouter with Loggable {
   static final _instance = InternalRouter._internal();
 
   @override
-  List<String> get loggerTags => ['souter'];
+  List<String> get loggerTags => ['router'];
 
   final Semaphore _navigation = Semaphore();
 

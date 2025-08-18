@@ -30,7 +30,8 @@
 */
 
 import 'package:flutter/widgets.dart';
-import 'package:mosaic/src/events/events.dart';
+import 'package:mosaic/mosaic.dart';
+import 'package:mosaic/src/events/events_mixin.dart';
 import 'package:mosaic/src/routing/route_context.dart';
 
 class MosaicScope extends StatefulWidget {
@@ -40,25 +41,74 @@ class MosaicScope extends StatefulWidget {
   State<MosaicScope> createState() => _MosaicScopeState();
 }
 
-class _MosaicScopeState extends State<MosaicScope> {
-  late EventListener<RouteTransitionContext> _listener;
-
+class _MosaicScopeState extends State<MosaicScope> with Admissible {
+  final _lock = Semaphore();
   @override
   void initState() {
     super.initState();
-    _listener = events.on<RouteTransitionContext>('router/change', _transit);
+    on<RouteTransitionContext>('router/change/*', _changeRoute);
+    on<RouteTransitionContext>('router/push', _transit);
+    on<RouteTransitionContext>('router/pop', _transit);
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-    events.deafen(_listener);
+  void _transit<T>(EventContext<T> ctx) async {
+    if (!mounted || !context.mounted) return;
+    await _lock.acquire();
+    setState(() {});
+    _lock.release();
   }
 
-  void _transit(EventContext<RouteTransitionContext> ctx) {}
+  void _changeRoute(EventContext<RouteTransitionContext> ctx) {
+    final transition = ctx.data;
+    if (transition == null) return;
+    final target = transition.to;
+    target.onActive(transition);
+  }
 
   @override
   Widget build(BuildContext context) {
     return const Placeholder();
   }
 }
+
+class MyWidget extends StatefulWidget {
+  const MyWidget({super.key});
+
+  @override
+  State<MyWidget> createState() => _MyWidgetState();
+}
+
+class _MyWidgetState extends State<MyWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(pages: [], onDidRemovePage: (page) {});
+  }
+}
+
+class ModulePage<T extends Object> extends Page<T> {
+  const ModulePage({super.key, required this.moduleName, required this.child});
+
+  final String moduleName;
+  final Widget child;
+
+  @override
+  Route<T> createRoute(BuildContext context) {
+    return PageRouteBuilder(
+      settings: this,
+      pageBuilder: (context, animation, secondaryAnimation) => child,
+    );
+  }
+}
+
+class ModuleRouteBuilder extends PageRouteBuilder {
+  ModuleRouteBuilder({
+    super.settings,
+    super.requestFocus,
+    super.pageBuilder,
+    super.transitionsBuilder,
+    super.transitionDuration,
+    super.reverseTransitionDuration,
+  });
+}
+
+class ModuleRoute<T> extends Route<T> {}

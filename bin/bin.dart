@@ -97,19 +97,15 @@ final cmds = ArgNode(
 
 void main(List<String> args) {
   final parser = ArgParser();
-
   for (final child in cmds.children) {
     child.addCommand(parser);
   }
 
   final res = parser.parse(args);
 
-  if (res.command == null) {
-    print('No command provided. Usage: module <command>\n');
-    print('COMMANDS');
-    for (final cmd in cmds.children) {
-      print('${cmd.val.padRight(10)}: ${cmd.description}');
-    }
+  if (res.command == null || args.isEmpty) {
+    print('Mosaic needs some tesserae to works properly');
+    print(parser.usage);
     exit(1);
   }
 

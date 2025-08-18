@@ -33,6 +33,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mosaic/mosaic.dart';
+import 'package:mosaic/src/routing/route_context.dart';
 
 /// Lifecycle states for module management.
 ///
@@ -511,7 +512,7 @@ abstract class Module with Loggable {
   ///
   /// This is called after successful initialization and whenever the
   /// module transitions from another state to active.
-  void onActive() {}
+  void onActive(RouteTransitionContext ctx) {}
 
   /// Called when the module is being suspended.
   ///
