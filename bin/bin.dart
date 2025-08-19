@@ -34,6 +34,10 @@ import 'package:args/args.dart';
 import 'build.dart';
 import 'events.dart';
 import 'init.dart';
+import 'context.dart';
+import 'enviroment.dart';
+import 'config.dart';
+import 'mosaic.dart';
 
 class ArgNode {
   ArgNode(
@@ -46,7 +50,7 @@ class ArgNode {
   final String val;
   final String description;
   final List<ArgNode> children;
-  final Future<void> Function(ArgResults?)? callback;
+  final Future<void> Function(Context)? callback;
 
   ArgParser addCommand(ArgParser parser) {
     final added = parser.addCommand(val);
@@ -56,47 +60,61 @@ class ArgNode {
     return added;
   }
 
-  void parse(ArgResults res) {
+  void parse(ArgResults res, Configuration config, Environment env) {
     if (res.command?.name != val) return;
 
-    if (callback != null) callback!(res);
+    final ctx = Context(config: config, env: env, result: res);
+
+    if (callback != null) callback!(ctx);
 
     for (final child in children) {
-      child.parse(res.command!);
+      child.parse(res.command!, config, env);
     }
   }
 }
 
-final cmds = ArgNode(
-  '',
-  children: [
-    ArgNode(
-      'create',
-      callback: create,
-      description: 'Create a new mosaic project',
-    ),
-    ArgNode('init', callback: init, description: 'Initialize a mosaic project'),
-    ArgNode('add', callback: addModule, description: 'Add a module'),
-    ArgNode('enable', callback: enable, description: 'Enable a module'),
-    ArgNode('disable', callback: disable, description: 'Disable a module'),
-    ArgNode('default', callback: setDefault, description: 'Set default module'),
-    ArgNode('list', callback: listModules, description: 'List modules'),
-    ArgNode('remove', callback: removeModule, description: 'Remove a module'),
-    ArgNode(
-      'build',
-      callback: (_) => build(),
-      description: 'Build all modules',
-    ),
-    ArgNode(
-      'events',
-      callback: (_) => events(),
-      description: 'Generate event tree',
-    ),
-  ],
-);
-
 void main(List<String> args) {
+  final mosaic = Mosaic();
+  final cmds = ArgNode(
+    '',
+    children: [
+      ArgNode(
+        'create',
+        callback: mosaic.create,
+        description: 'Create a new mosaic project',
+      ),
+      ArgNode('add', callback: mosaic.add, description: 'Add a module'),
+      ArgNode(
+        'enable',
+        callback: mosaic.enable,
+        description: 'Enable a module',
+      ),
+      ArgNode(
+        'disable',
+        callback: mosaic.disable,
+        description: 'Disable a module',
+      ),
+      ArgNode(
+        'default',
+        callback: mosaic.setDefault,
+        description: 'Set default module',
+      ),
+      ArgNode('list', callback: mosaic.list, description: 'List modules'),
+      ArgNode(
+        'remove',
+        callback: mosaic.remove,
+        description: 'Remove a module',
+      ),
+      ArgNode('tidy', callback: mosaic.tidy, description: 'Build all modules'),
+      ArgNode(
+        'events',
+        callback: mosaic.events,
+        description: 'Generate event tree',
+      ),
+    ],
+  );
   final parser = ArgParser();
+
   for (final child in cmds.children) {
     child.addCommand(parser);
   }

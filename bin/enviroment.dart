@@ -31,10 +31,12 @@
 
 import 'dart:collection';
 import 'dart:io';
+import 'tessera.dart';
 
-class Enviroment {
+class Environment {
   static const String projectMarker = 'mosaic.yaml';
   static const String packageMark = 'pubspec.yaml';
+  static const String tesseraMark = 'tessera.yaml';
 
   static String get home => Platform.isWindows
       ? Platform.environment['USERPROFILE']!
@@ -51,18 +53,6 @@ class Enviroment {
     }
 
     return null;
-  }
-
-  bool _containsFile(Directory path, String target) {
-    try {
-      if (!path.existsSync()) return false;
-
-      return path.listSync().whereType<File>().any(
-        (f) => _filename(f) == target,
-      );
-    } catch (e) {
-      return false;
-    }
   }
 
   bool isValid([String? path]) => root(path) != null;
@@ -94,11 +84,47 @@ class Enviroment {
 
   Future<void> walkCmd(List<String> cmd, [String? path]) async {
     return walk((d) async {
-      if (isValidPackage(d.path)) {
+      if (isValidPackage(path: d.path)) {
         return _command(cmd, d);
       }
       return true;
     }, path);
+  }
+
+  bool isValidPackage({String? path, String target = packageMark}) {
+    Directory curr = Directory.current;
+    if (path != null) curr = Directory(path);
+
+    final files = curr.listSync().whereType<File>();
+
+    for (final file in files) {
+      if (_filename(file) == target) return true;
+    }
+
+    return false;
+  }
+
+  Future<Set<String>> getExistingTesserae([String? path]) async {
+    final tesserae = <String>{};
+    walk((dir) async {
+      if (!isValidPackage(path: dir.path, target: tesseraMark)) return false;
+
+      tesserae.add(dir.path);
+
+      return true;
+    }, path);
+    return tesserae;
+  }
+
+  String _filename(File file) =>
+      file.path.split(Platform.pathSeparator).removeLast();
+
+  bool _isHiddenDirectory(Directory dir) {
+    final name = dir.path.split(Platform.pathSeparator).last;
+
+    final hiddens = {'node_modules', 'build'};
+
+    return name.startsWith('.') || hiddens.contains(name);
   }
 
   Future<bool> _command(List<String> cmd, Directory curr) async {
@@ -118,30 +144,18 @@ class Enviroment {
 
     await process.exitCode;
 
-    return isValidPackage(curr.path);
+    return isValidPackage(path: curr.path);
   }
 
-  bool isValidPackage([String? path]) {
-    Directory curr = Directory.current;
-    if (path != null) curr = Directory(path);
+  bool _containsFile(Directory path, String target) {
+    try {
+      if (!path.existsSync()) return false;
 
-    final files = curr.listSync().whereType<File>();
-
-    for (final file in files) {
-      if (_filename(file) == packageMark) return true;
+      return path.listSync().whereType<File>().any(
+        (f) => _filename(f) == target,
+      );
+    } catch (e) {
+      return false;
     }
-
-    return false;
-  }
-
-  String _filename(File file) =>
-      file.path.split(Platform.pathSeparator).removeLast();
-
-  bool _isHiddenDirectory(Directory dir) {
-    final name = dir.path.split(Platform.pathSeparator).last;
-
-    final hiddens = {'node_modules', 'build'};
-
-    return name.startsWith('.') || hiddens.contains(name);
   }
 }

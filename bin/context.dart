@@ -28,61 +28,61 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-import 'gesso.dart';
 
 import 'dart:io';
 
-import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as p;
-import 'package:archive/archive_io.dart';
 import 'package:args/args.dart';
-// import 'package:interact/interact.dart';
+import 'config.dart';
+import 'enviroment.dart';
+import 'tessera.dart';
 
-Future<void> init(ArgResults? arg) async {}
-Future<void> create(ArgResults? arg) async {
-  if (arg == null) {
-    print('Invalid argument'.red);
-    exit(1);
-  }
-  final projectName = arg.arguments.last;
-  await downloadGitRepository('marcomit', 'mosaic_starter', projectName);
-  print('Template downloaded'.green);
-}
+class Context {
+  Context({required this.config, required this.env, required this.result});
+  final Configuration config;
+  final Environment env;
 
-Future<void> downloadGitRepository(
-  String username,
-  String repository,
-  String output, [
-  String branch = 'main',
-]) async {
-  final tempDir = Directory.systemTemp.createTempSync();
-  final zipUrl =
-      'https://github.com/$username/$repository/archive/refs/heads/$branch.zip';
+  final ArgResults result;
 
-  print('Downloading template...'.blink);
-  final response = await http.get(Uri.parse(zipUrl));
-  final archive = ZipDecoder().decodeBytes(response.bodyBytes);
+  List<String> get restArgs => result.rest;
+  bool get hasRestArgs => restArgs.isNotEmpty;
 
-  print('Extracting...'.blink.yellow);
-  for (final file in archive) {
-    final filename = file.name.replaceFirst('stdlib-$branch/', '');
-    if (filename.isEmpty) continue;
-    final outputPath = p.join(tempDir.path, filename);
-    if (file.isFile) {
-      File(outputPath)
-        ..createSync(recursive: true)
-        ..writeAsBytesSync(file.content as List<int>);
-    } else {
-      Directory(outputPath).createSync(recursive: true);
+  void validateNoRestArgs() {
+    if (hasRestArgs) {
+      throw Exception('Unexpected paramenters ${restArgs.join(', ')}');
     }
   }
 
-  final destination = Directory(output);
-  if (destination.existsSync()) {
-    print('Error: Folder \'$output\' already exists.');
-    exit(1);
+  void validateRestArgsLength([int length = 0]) {
+    if (restArgs.length != length) {
+      throw Exception('Expected $length args, found ${restArgs.length}');
+    }
   }
-  tempDir.renameSync(output);
 
-  print('Project \'$output\' created!');
+  Future<Set<Tessera>> tesserae([String? root]) async {
+    final result = <Tessera>{};
+    final paths = await env.getExistingTesserae(root);
+
+    for (final path in paths) {
+      final tessera = await getTesseraFromPath(path);
+      if (tessera != null) result.add(tessera);
+    }
+
+    return result;
+  }
+
+  Future<Tessera?> getTesseraFromPath(String path) async {
+    final content = await config.read(path);
+    return Tessera.fromJson(content, path);
+  }
+
+  Future<Tessera?> getTesseraFromName(String name) async {
+    final paths = await env.getExistingTesserae();
+
+    for (final path in paths) {
+      if (path.split(Platform.pathSeparator).last == name) {
+        return getTesseraFromPath(path);
+      }
+    }
+    return null;
+  }
 }
