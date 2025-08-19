@@ -36,13 +36,13 @@ import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 import 'package:mosaic/src/events/events.dart';
 import 'package:mosaic/src/logger/logger.dart';
 import 'package:mosaic/src/modules/modules.dart';
+import 'package:mosaic/src/routing/route_context.dart';
 
 /// Manages all modules in the application and provides centralized control
 /// over module lifecycle, error handling, and state management.
 class ModuleManager with Loggable {
-  ModuleManager._internal() {
-    _operationLock.complete();
-  }
+  ModuleManager._internal();
+
   static final _instance = ModuleManager._internal();
 
   @override
@@ -58,9 +58,6 @@ class ModuleManager with Loggable {
 
   /// Name of the currently active module.
   String? currentModule;
-
-  /// Lock for synchronizing module operations.
-  final _operationLock = Completer<void>();
 
   /// All registered modules (read-only view).
   Map<String, Module> get _modules {
@@ -165,7 +162,8 @@ class ModuleManager with Loggable {
     }
 
     currentModule = module.name;
-    module.onActive();
+
+    module.onActive(RouteTransitionContext(to: module));
     info('Activated module ${module.name}');
 
     events.emit<String>('module_manager/module_activated', module.name);
@@ -211,6 +209,12 @@ class ModuleManager with Loggable {
         });
       }),
     );
+  }
+
+  Future<void> initialize() async {
+    for (final module in activeModules.values) {
+      module.onInit();
+    }
   }
 }
 

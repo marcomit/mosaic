@@ -33,8 +33,8 @@ import 'dart:collection';
 import 'dart:io';
 
 class Enviroment {
-  static const String mark = 'mosaic.yaml';
-  static const String packageMark = 'pubspeck.yaml';
+  static const String projectMarker = 'mosaic.yaml';
+  static const String packageMark = 'pubspec.yaml';
 
   static String get home => Platform.isWindows
       ? Platform.environment['USERPROFILE']!
@@ -45,52 +45,67 @@ class Enviroment {
 
     if (path != null) curr = Directory(path);
 
-    while (curr.path == home) {
-      final entries = curr.listSync();
-      for (final entry in entries) {
-        if (entry is File) {
-          final filename = entry.path
-              .split(Platform.pathSeparator)
-              .removeLast();
-          if (filename == mark) return entry.parent;
-        }
-      }
+    while (curr.path != home && curr.path != curr.parent.path) {
+      if (_containsFile(curr, projectMarker)) return curr;
       curr = curr.parent;
     }
+
     return null;
+  }
+
+  bool _containsFile(Directory path, String target) {
+    try {
+      if (!path.existsSync()) return false;
+
+      return path.listSync().whereType<File>().any(
+        (f) => _filename(f) == target,
+      );
+    } catch (e) {
+      return false;
+    }
   }
 
   bool isValid([String? path]) => root(path) != null;
 
   Future<void> walk(
-    Future<bool> Function(Directory) dir, [
+    Future<bool> Function(Directory) visitor, [
     String? path,
   ]) async {
     final curr = root(path);
 
     if (curr == null) return;
 
-    final levels = Queue<Directory>();
+    final queue = Queue<Directory>();
 
-    levels.add(curr);
+    queue.add(curr);
 
-    while (levels.isNotEmpty) {
-      final head = levels.removeFirst();
+    while (queue.isNotEmpty) {
+      final head = queue.removeFirst();
 
-      if (!await dir(head)) continue;
+      if (!await visitor(head)) continue;
 
-      levels.addAll(head.listSync().whereType<Directory>());
+      final subdir = head.listSync().whereType<Directory>().where(
+        (d) => !_isHiddenDirectory(d),
+      );
+
+      queue.addAll(subdir);
     }
   }
 
   Future<void> walkCmd(List<String> cmd, [String? path]) async {
-    return walk((d) => _command(cmd, d));
+    return walk((d) async {
+      if (isValidPackage(d.path)) {
+        return _command(cmd, d);
+      }
+      return true;
+    }, path);
   }
 
   Future<bool> _command(List<String> cmd, Directory curr) async {
     final process = await Process.start(
       cmd[0],
       cmd.sublist(1),
+      workingDirectory: curr.path,
       runInShell: true,
     );
 
@@ -121,4 +136,12 @@ class Enviroment {
 
   String _filename(File file) =>
       file.path.split(Platform.pathSeparator).removeLast();
+
+  bool _isHiddenDirectory(Directory dir) {
+    final name = dir.path.split(Platform.pathSeparator).last;
+
+    final hiddens = {'node_modules', 'build'};
+
+    return name.startsWith('.') || hiddens.contains(name);
+  }
 }
