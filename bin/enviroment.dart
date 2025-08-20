@@ -31,7 +31,6 @@
 
 import 'dart:collection';
 import 'dart:io';
-import 'tessera.dart';
 
 class Environment {
   static const String projectMarker = 'mosaic.yaml';
@@ -42,26 +41,26 @@ class Environment {
       ? Platform.environment['USERPROFILE']!
       : Platform.environment['HOME']!;
 
-  Directory? root([String? path]) {
+  Future<Directory?> root([String? path]) async {
     Directory curr = Directory.current;
 
     if (path != null) curr = Directory(path);
 
     while (curr.path != home && curr.path != curr.parent.path) {
-      if (_containsFile(curr, projectMarker)) return curr;
+      if (await _containsFile(curr, projectMarker)) return curr;
       curr = curr.parent;
     }
 
     return null;
   }
 
-  bool isValid([String? path]) => root(path) != null;
+  Future<bool> isValid([String? path]) async => await root(path) != null;
 
   Future<void> walk(
     Future<bool> Function(Directory) visitor, [
     String? path,
   ]) async {
-    final curr = root(path);
+    final curr = await root(path);
 
     if (curr == null) return;
 
@@ -147,9 +146,9 @@ class Environment {
     return isValidPackage(path: curr.path);
   }
 
-  bool _containsFile(Directory path, String target) {
+  Future<bool> _containsFile(Directory path, String target) async {
     try {
-      if (!path.existsSync()) return false;
+      if (!await path.exists()) return false;
 
       return path.listSync().whereType<File>().any(
         (f) => _filename(f) == target,

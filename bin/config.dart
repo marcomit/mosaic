@@ -35,13 +35,12 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 import 'enviroment.dart';
 import 'tessera.dart';
+import 'yaml_encoding.dart';
 
 class Configuration {
   Configuration();
 
   static const String projectConfig = 'mosaic.yaml';
-
-  final String moduleDir = 'modules';
 
   Map<String, dynamic> _config = {};
 
@@ -51,6 +50,27 @@ class Configuration {
 
   Map<String, dynamic> get events => _config['events'] ?? {};
 
+  String _getDefaultConfigFile(String name) {
+    return '''name: $name
+description: Entry point for the project configuration
+version: 1.0.0
+default_level: debug
+
+debug:
+  logger: debug
+events:
+''';
+  }
+
+  Future<void> createDefaultConfigFile(String name, String path) async {
+    final file = File([path, projectConfig].join(Platform.pathSeparator));
+    if (await file.exists()) {
+      throw Exception('File already exists');
+    }
+    await file.create();
+    await file.writeAsString(_getDefaultConfigFile(name));
+  }
+
   Future<Map<String, dynamic>> read(String path) async {
     final config = File(path);
 
@@ -59,12 +79,22 @@ class Configuration {
     return jsonDecode(jsonEncode(yamlMap));
   }
 
+  Future<void> write(String path, Map<String, dynamic> json) async {
+    final file = File(path);
+    if (!file.existsSync()) {
+      throw Exception('File $path does not exists');
+    }
+    final yaml = YamlEncoding().serialize(json);
+
+    await file.writeAsString(yaml);
+  }
+
   Future<Map<String, dynamic>> readConfig(String path) async {
     return read([path, projectConfig].join(Platform.pathSeparator));
   }
 
   Future<Map<String, dynamic>> loadFromEnv() async {
-    final env = Environment().root();
+    final env = await Environment().root();
 
     if (env == null) {
       throw Exception('Invalid root');
@@ -76,6 +106,6 @@ class Configuration {
 
   Future<Tessera> tessera(String path) async {
     final file = await read(path);
-    return Tessera.fromJson(file);
+    return Tessera.fromJson(file, path);
   }
 }

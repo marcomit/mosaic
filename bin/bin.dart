@@ -28,106 +28,80 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-import 'dart:io';
-import 'package:args/args.dart';
 
-import 'build.dart';
-import 'events.dart';
-import 'init.dart';
+import 'dart:async';
+
+import 'package:argv/argv.dart';
+
 import 'context.dart';
-import 'enviroment.dart';
-import 'config.dart';
 import 'mosaic.dart';
+import 'config.dart';
+import 'enviroment.dart';
 
-class ArgNode {
-  ArgNode(
-    this.val, {
-    this.description = '',
-    this.children = const [],
-    this.callback,
-  });
+Argv setupCli() {
+  final mosaic = Mosaic();
+  final config = Configuration();
+  final env = Environment();
 
-  final String val;
-  final String description;
-  final List<ArgNode> children;
-  final Future<void> Function(Context)? callback;
-
-  ArgParser addCommand(ArgParser parser) {
-    final added = parser.addCommand(val);
-    for (final child in children) {
-      child.addCommand(added);
-    }
-    return added;
+  ArgvCallback wrap(FutureOr<void> Function(Context) callback) {
+    return (ArgvResult res) async {
+      final ctx = Context(config: config, env: env, cli: res);
+      return await callback(ctx);
+    };
   }
 
-  void parse(ArgResults res, Configuration config, Environment env) {
-    if (res.command?.name != val) return;
-
-    final ctx = Context(config: config, env: env, result: res);
-
-    if (callback != null) callback!(ctx);
-
-    for (final child in children) {
-      child.parse(res.command!, config, env);
-    }
-  }
+  final app = Argv('mosaic', 'Modular architecture')
+    ..command('walk').positional('command').on(wrap(mosaic.walk))
+    ..command('status').on(wrap(mosaic.status))
+    ..command(
+      'list',
+      description: 'Discover all tesserae in the project',
+    ).positional('path').on(wrap(mosaic.list))
+    ..command(
+      'create',
+      description: 'Create a new mosaic project',
+    ).positional('name').on(wrap(mosaic.create))
+    ..command(
+      'add',
+      description: 'Add a tessera',
+    ).positional('name').on(wrap(mosaic.add))
+    ..command('delete', description: 'Delete a tessera')
+        .positional('name')
+        .flag('force', abbr: 'f', defaultTo: false)
+        .on(wrap(mosaic.delete))
+    ..command(
+      'tidy',
+      description: 'Add to the root project all existing tesserae',
+    ).on(wrap(mosaic.tidy))
+    ..command(
+      'enable',
+      description: 'Enable a tessera',
+    ).positional('name').on(wrap(mosaic.enable))
+    ..command(
+      'disable',
+      description: 'Disable a tessera',
+    ).positional('name').on(wrap(mosaic.disable))
+    ..command(
+      'default',
+      description: 'Set the default tessera',
+    ).positional('name').on(wrap(mosaic.setDefault))
+    ..command(
+      'events',
+      description: 'Build the events based on the configuration file',
+    ).on(wrap(mosaic.events));
+  return app;
 }
 
-void main(List<String> args) {
-  final mosaic = Mosaic();
-  final cmds = ArgNode(
-    '',
-    children: [
-      ArgNode(
-        'create',
-        callback: mosaic.create,
-        description: 'Create a new mosaic project',
-      ),
-      ArgNode('add', callback: mosaic.add, description: 'Add a module'),
-      ArgNode(
-        'enable',
-        callback: mosaic.enable,
-        description: 'Enable a module',
-      ),
-      ArgNode(
-        'disable',
-        callback: mosaic.disable,
-        description: 'Disable a module',
-      ),
-      ArgNode(
-        'default',
-        callback: mosaic.setDefault,
-        description: 'Set default module',
-      ),
-      ArgNode('list', callback: mosaic.list, description: 'List modules'),
-      ArgNode(
-        'remove',
-        callback: mosaic.remove,
-        description: 'Remove a module',
-      ),
-      ArgNode('tidy', callback: mosaic.tidy, description: 'Build all modules'),
-      ArgNode(
-        'events',
-        callback: mosaic.events,
-        description: 'Generate event tree',
-      ),
-    ],
-  );
-  final parser = ArgParser();
+void main(List<String> args) async {
+  final mosaic = setupCli();
 
-  for (final child in cmds.children) {
-    child.addCommand(parser);
-  }
-
-  final res = parser.parse(args);
-
-  if (res.command == null || args.isEmpty) {
-    print('Mosaic needs some tesserae to works properly');
-    print(parser.usage);
-    exit(1);
-  }
-
-  for (final child in cmds.children) {
-    child.parse(res);
+  try {
+    if (args.isEmpty) return print(mosaic.usage());
+    await mosaic.run(args);
+  } on ArgvException catch (e) {
+    print(e);
+    print(mosaic.usage());
+  } on Exception catch (e) {
+    print(e);
   }
 }

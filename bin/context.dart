@@ -31,35 +31,24 @@
 
 import 'dart:io';
 
-import 'package:args/args.dart';
+import 'package:argv/argv.dart';
+
 import 'config.dart';
 import 'enviroment.dart';
 import 'tessera.dart';
+import 'exception.dart';
+import 'gesso.dart';
 
 class Context {
-  Context({required this.config, required this.env, required this.result});
+  Context({required this.config, required this.env, required this.cli});
   final Configuration config;
   final Environment env;
 
-  final ArgResults result;
-
-  List<String> get restArgs => result.rest;
-  bool get hasRestArgs => restArgs.isNotEmpty;
-
-  void validateNoRestArgs() {
-    if (hasRestArgs) {
-      throw Exception('Unexpected paramenters ${restArgs.join(', ')}');
-    }
-  }
-
-  void validateRestArgsLength([int length = 0]) {
-    if (restArgs.length != length) {
-      throw Exception('Expected $length args, found ${restArgs.length}');
-    }
-  }
+  final ArgvResult cli;
 
   Future<Set<Tessera>> tesserae([String? root]) async {
     final result = <Tessera>{};
+    root ??= (await env.root())?.path;
     final paths = await env.getExistingTesserae(root);
 
     for (final path in paths) {
@@ -84,5 +73,12 @@ class Context {
       }
     }
     return null;
+  }
+
+  Future<void> checkEnvironment() async {
+    final isValid = await env.isValid();
+    if (!isValid) {
+      throw CliException('You are not inside a valid mosaic project'.red);
+    }
   }
 }

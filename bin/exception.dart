@@ -29,76 +29,10 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-import 'dart:io';
+class CliException implements Exception {
+  const CliException(this.message);
+  final String message;
 
-import 'context.dart';
-import 'enviroment.dart';
-
-class Tessera {
-  Tessera(
-    this.name, {
-    required this.path,
-    this.active = false,
-    this.dependencies = const [],
-  });
-
-  factory Tessera.fromJson(Map<String, dynamic> json, String path) {
-    List<String> deps = [];
-
-    try {
-      deps = (json['dependencies'] as List)
-          .map<String>((e) => e.toString())
-          .toList();
-    } catch (e) {
-      //
-    }
-    return Tessera(
-      json['name'] ?? '',
-      active: json['active'] == true,
-      dependencies: deps,
-      path: path,
-    );
-  }
-
-  final String name;
-  final String path;
-  final List<String> dependencies;
-  bool active;
-
-  Map<String, dynamic> serialize() {
-    return {'name': name, 'active': active, 'dependencies': dependencies};
-  }
-
-  Future<void> enable(Context ctx) async {
-    active = true;
-    await _save(ctx);
-  }
-
-  Future<void> disable(Context ctx) async {
-    active = false;
-    await _save(ctx);
-  }
-
-  Future<void> delete(Context ctx) async {
-    final tessera = Directory(path);
-
-    try {
-      await tessera.delete(recursive: true);
-    } catch (e) {
-      print('Error deleting tessera $name');
-      exit(1);
-    }
-  }
-
-  Future<void> _save(Context ctx) async {
-    try {
-      await ctx.config.write(
-        [path, Environment.tesseraMark].join(Platform.pathSeparator),
-        serialize(),
-      );
-    } catch (e) {
-      print('Error saving the configuration of tessera $name');
-      exit(1);
-    }
-  }
+  @override
+  String toString() => message;
 }
