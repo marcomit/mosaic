@@ -37,6 +37,7 @@ import 'context.dart';
 import 'mosaic.dart';
 import 'config.dart';
 import 'enviroment.dart';
+import 'exception.dart';
 
 Argv setupCli() {
   final mosaic = Mosaic();
@@ -51,12 +52,15 @@ Argv setupCli() {
   }
 
   final app = Argv('mosaic', 'Modular architecture')
-    ..command('walk').positional('command').on(wrap(mosaic.walk))
+    ..command(
+      'walk',
+      description: 'Execute the command in all tesserae',
+    ).positional('command').on(wrap(mosaic.walk))
     ..command('status').on(wrap(mosaic.status))
     ..command(
       'list',
       description: 'Discover all tesserae in the project',
-    ).positional('path').on(wrap(mosaic.list))
+    ).positional('path').flag('path', abbr: 'p').on(wrap(mosaic.list))
     ..command(
       'create',
       description: 'Create a new mosaic project',
@@ -101,7 +105,10 @@ void main(List<String> args) async {
   } on ArgvException catch (e) {
     print(e);
     print(mosaic.usage());
-  } on Exception catch (e) {
+  } on CliException catch (e) {
     print(e);
+  } catch (e, stack) {
+    print('Unknown error $e');
+    print(stack);
   }
 }

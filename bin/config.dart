@@ -35,7 +35,8 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 import 'enviroment.dart';
 import 'tessera.dart';
-import 'yaml_encoding.dart';
+import 'utils/yaml_encoding.dart';
+import 'utils/utils.dart';
 
 class Configuration {
   Configuration();
@@ -44,16 +45,18 @@ class Configuration {
 
   Map<String, dynamic> _config = {};
 
-  Map<String, dynamic> get config => Map.unmodifiable(_config);
-
   String? get defaultModule => _config['default'];
 
   Map<String, dynamic> get events => _config['events'] ?? {};
 
   String _getDefaultConfigFile(String name) {
-    return '''name: $name
+    return '''# Note: this is a generated file, don't touch it!!!
+name: $name
 description: Entry point for the project configuration
 version: 1.0.0
+
+default: $name
+
 default_level: debug
 
 debug:
@@ -63,12 +66,21 @@ events:
   }
 
   Future<void> createDefaultConfigFile(String name, String path) async {
-    final file = File([path, projectConfig].join(Platform.pathSeparator));
+    final file = File(utils.join([path, projectConfig]));
     if (await file.exists()) {
       throw Exception('File already exists');
     }
-    await file.create();
+    await file.create(recursive: true);
     await file.writeAsString(_getDefaultConfigFile(name));
+  }
+
+  dynamic get(String name) => _config[name];
+  void set(String key, dynamic value) => _config[key] = value;
+
+  Future<void> save() async {
+    final env = (await Environment().root())!;
+    final path = utils.join([env.path, Environment.projectMarker]);
+    await write(path, _config);
   }
 
   Future<Map<String, dynamic>> read(String path) async {
@@ -90,7 +102,7 @@ events:
   }
 
   Future<Map<String, dynamic>> readConfig(String path) async {
-    return read([path, projectConfig].join(Platform.pathSeparator));
+    return read(utils.join([path, projectConfig]));
   }
 
   Future<Map<String, dynamic>> loadFromEnv() async {

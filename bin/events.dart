@@ -28,10 +28,7 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-import 'dart:convert';
 import 'dart:io';
-
-import 'build.dart';
 
 extension on String {
   String capitalize() {
@@ -124,31 +121,20 @@ class $className extends Segment$nodeMixin {
   }
 }
 
-Future<Map<String, dynamic>> _loadEvents() async {
-  final File events = File(moduleEnv);
-  final content = await events.readAsString();
-  return jsonDecode(content)['events'];
-}
+class EventsGenerator {
+  EventsGenerator(this._json);
+  final Map<String, dynamic> _json;
 
-Future<void> events() async {
-  final json = await _loadEvents();
+  Future<String> generate() async {
+    final _Layer head = _Layer('', []);
+    head.extend(_json);
 
-  final _Layer head = _Layer('', []);
-  head.extend(json);
+    final content = head.children.map((c) => c.toString()).join('\n\n');
 
-  final content = head.children.map((c) => c.toString()).join('\n\n');
-
-  final headProps = [];
-
-  for (final child in head.children) {
-    headProps.add(
-      '${child.className} get ${child.val} => ${child.className}('
-      ');',
-    );
-  }
-
-  final generated = File('core/modules/lib/event_tree.dart');
-  await generated.writeAsString('''
+    final headProps = head.children.map((child) {
+      return '${child.className} get ${child.val} => ${child.className}();';
+    });
+    return '''
 import 'package:modules/chain.dart';
 
 /* WARNING: this is a generated file!!! */
@@ -158,6 +144,13 @@ $content
 mixin HeadNode {
   ${headProps.join('\n  ')}
 }
-''');
-  print('event_tree.dart generated!');
+''';
+  }
+
+  Future<void> saveFile(String path) async {
+    final file = File(path);
+
+    final content = await generate();
+    await file.writeAsString(content);
+  }
 }

@@ -506,7 +506,7 @@ abstract class Module with Loggable {
   /// - Initializing state
   ///
   /// **Throws:** Any exception to indicate initialization failure
-  Future<void> onInit() async {}
+  FutureOr<void> onInit() async {}
 
   /// Called when the module becomes active.
   ///
@@ -522,7 +522,7 @@ abstract class Module with Loggable {
   /// - Release non-essential resources
   ///
   /// **Throws:** Any exception to indicate suspension failure
-  Future<void> onSuspend() async {}
+  FutureOr<void> onSuspend() async {}
 
   /// Called when the module is being resumed from suspension.
   ///
@@ -543,7 +543,7 @@ abstract class Module with Loggable {
   /// - Perform cleanup
   ///
   /// **Note:** Basic cleanup (DI container, events, etc.) is handled automatically.
-  Future<void> onDispose() async {}
+  FutureOr<void> onDispose() async {}
 
   /// Called when an error occurs during lifecycle transitions.
   ///
@@ -552,7 +552,7 @@ abstract class Module with Loggable {
   /// **Parameters:**
   /// * [error] - The error that occurred
   /// * [stackTrace] - Stack trace of the error
-  Future<void> onError(Object error, StackTrace stackTrace) async {
+  FutureOr<void> onError(Object error, StackTrace stackTrace) async {
     this.error('Module error: $error');
   }
 
@@ -570,5 +570,5 @@ abstract class Module with Loggable {
   ///
   /// **Parameters:**
   /// * [newModule] - The new module implementation
-  Future<void> onHotReload(Module newModule) async {}
+  FutureOr<void> onHotReload(Module newModule) async {}
 }

@@ -33,9 +33,10 @@ import 'dart:io';
 import 'package:argv/argv.dart';
 
 import 'context.dart';
-import 'gesso.dart';
+import 'utils/gesso.dart';
+import 'utils/utils.dart';
 import 'exception.dart';
-import 'enviroment.dart';
+import 'tessera.dart';
 
 /// Mosaic in this case refers like the orchestrator of the tesserae
 class Mosaic {
@@ -93,19 +94,35 @@ class Mosaic {
   Future<void> setDefault(Context ctx) async {
     await ctx.checkEnvironment();
     final name = ctx.cli.positional('name');
-    if (name == null) throw ArgvException('Missing tessera name');
+    if (name == null) {
+      final initial = ctx.config.get('default');
+      if (initial == null) {
+        print('Default tessera not found');
+        return;
+      }
+      print('Initial tessera: $initial');
+      return;
+    }
+
+    final exists = await ctx.env.exists(name);
+
+    if (!exists) {
+      print('$name does not an existing tessera');
+      return;
+    }
 
     print('');
     print('┌─ Setting Default Tessera ───────────┐'.dim);
     print('│ '.dim + '★ '.yellow + name.cyan.bold + ' │'.dim.padRight(42));
     print('└─────────────────────────────────────┘'.dim);
 
-    ctx.config.config['initial'] = name;
+    ctx.config.set('default', name);
+    await ctx.config.save();
     print('✓ Default tessera set to '.green + name.bold.green);
   }
 
   Future<void> create(Context ctx) async {
-    final name = ctx.cli.positional('name');
+    String? name = ctx.cli.positional('name');
     if (name == null) throw ArgvException('Missing project name');
 
     if (await ctx.env.isValid()) {
@@ -113,6 +130,8 @@ class Mosaic {
         'Already inside a mosaic project (subprojects coming soon)',
       );
     }
+
+    name = await utils.ensureExistsParent(name);
 
     final root = Directory(name);
     if (await root.exists()) {
@@ -127,14 +146,14 @@ class Mosaic {
     print('└─────────────────────────────────────┘'.dim);
     print('');
 
-    await root.create(recursive: true);
-    final mark = File(
-      [root.path, Environment.projectMarker].join(Platform.pathSeparator),
-    );
-
-    await mark.create();
-
     print('✓ Project structure created'.green);
+
+    await ctx.config.createDefaultConfigFile(name, root.path);
+
+    await utils.cmd(['flutter', 'create', name], path: root.path);
+
+    await utils.install(path: root.path);
+
     print('✓ Mosaic marker initialized'.green);
     print('');
     print('Next steps:'.bold.cyan);
@@ -159,25 +178,21 @@ class Mosaic {
   }
 
   Future<void> list(Context ctx) async {
+    await ctx.checkEnvironment();
     final root = ctx.cli.positional('path');
-    final path = [Directory.current.path, if (root != null) root];
+    final showPath = ctx.cli.flag('path');
 
     print('');
     print('┌─ Tessera Discovery ─────────────────┐'.dim);
-    print(
-      '│ '.dim +
-          'Scanning: '.dim +
-          path.join(Platform.pathSeparator).truncate(24).cyan +
-          ' │'.dim.padRight(42),
-    );
+    print('│ '.dim + 'Scanning: '.dim + ' │'.dim.padRight(42));
     print('└─────────────────────────────────────┘'.dim);
     print('');
 
     final existing = await ctx.tesserae(root);
-    final defaultModule = ctx.config.defaultModule;
+    final defaultModule = ctx.config.get('default');
 
     if (existing.isNotEmpty) {
-      print('Available Tesserae'.bold.cyan + ':');
+      print('${'Available Tesserae'.bold.cyan}:');
       print('');
 
       for (final tessera in existing) {
@@ -198,7 +213,12 @@ class Mosaic {
             ? ' [${tessera.dependencies.join(', ')}]'.dim
             : '';
 
-        print('  $prefix $name'.padRight(30) + '($status)$deps'.dim);
+        final blocks = [
+          '  $prefix $name'.padRight(30),
+          ' ($status)$deps'.dim,
+          if (showPath) ' ${tessera.path} ',
+        ];
+        print(blocks.join(''));
       }
 
       if (defaultModule != null) {
@@ -246,11 +266,22 @@ class Mosaic {
   }
 
   Future<void> add(Context ctx) async {
-    final name = ctx.cli.positional('name');
+    await ctx.checkEnvironment();
+    Directory root = (await ctx.env.root())!;
+    String? name = ctx.cli.positional('name');
+
     if (name == null) {
       throw const CliException('Missing tessera name');
     }
 
+    root = Directory(utils.parent(name));
+    name = await utils.ensureExistsParent(name);
+
+    // await utils.ancestor(Environment.tesseraMark, root.path);
+
+    if (await ctx.env.exists(name)) {
+      throw CliException('Tessera $name already exists');
+    }
     print('');
     print('┌─ Adding Tessera ────────────────────┐'.dim);
     print('│ '.dim + '+ '.green + name.cyan.bold + ' │'.dim.padRight(42));
@@ -258,14 +289,12 @@ class Mosaic {
     print('');
 
     print('Creating Flutter module...'.dim);
-    final process = await Process.start('flutter', [
-      'create',
+    final tessera = Tessera(
       name,
-    ], workingDirectory: Directory.current.path);
-    stdout.addStream(process.stdout);
-    stderr.addStream(process.stderr);
-
-    final code = await process.exitCode;
+      path: utils.join([root.path, name]),
+      active: true,
+    );
+    final code = await tessera.create();
     if (code == 0) {
       print('');
       print(
@@ -278,40 +307,11 @@ class Mosaic {
   }
 
   Future<void> status(Context ctx) async {
-    final valid = await ctx.env.isValid();
-
-    print('');
-    print('┌─ Mosaic Status ─────────────────────┐'.dim);
-    if (valid) {
-      print(
-        '│ '.dim +
-            '✓ '.green +
-            'Valid mosaic environment'.green.bold +
-            '     │'.dim,
-      );
+    final root = await ctx.env.root();
+    if (root == null) {
+      print('You\'re not in a valid project');
     } else {
-      print(
-        '│ '.dim +
-            '✗ '.red +
-            'Invalid environment'.red.bold +
-            '          │'.dim,
-      );
-    }
-    print('└─────────────────────────────────────┘'.dim);
-
-    if (valid) {
-      print('');
-      print('Environment Details:'.bold.cyan);
-      print('  Project root: ${Directory.current.path}'.dim);
-      print('  Marker file: ${Environment.projectMarker}'.dim);
-    } else {
-      print('');
-      print('Resolution:'.bold.yellow);
-      print(
-        '  Run '.dim +
-            'mosaic create <name>'.cyan +
-            ' to initialize a project'.dim,
-      );
+      print('Project root: ${root.path}');
     }
   }
 }

@@ -33,6 +33,8 @@ import 'dart:io';
 
 import 'context.dart';
 import 'enviroment.dart';
+import 'utils/utils.dart';
+import 'exception.dart';
 
 class Tessera {
   Tessera(
@@ -45,19 +47,80 @@ class Tessera {
   factory Tessera.fromJson(Map<String, dynamic> json, String path) {
     List<String> deps = [];
 
-    try {
-      deps = (json['dependencies'] as List)
-          .map<String>((e) => e.toString())
-          .toList();
-    } catch (e) {
-      //
-    }
+    _validateKeys(json);
+
+    deps = (json['dependencies'] ?? [])
+        .map<String>((e) => e.toString())
+        .toList();
+
     return Tessera(
       json['name'] ?? '',
       active: json['active'] == true,
       dependencies: deps,
       path: path,
     );
+  }
+
+  static void _validateKeys(Map<String, dynamic> json) {
+    final keys = ['dependencies', 'name', 'active'];
+    final missing = utils.validateKeys(json, keys);
+    if (missing.isNotEmpty) {
+      throw CliException(
+        'Tessera config corrupted, missing fields ${missing.join(', ')}',
+      );
+    }
+
+    if (json['dependencies'] is! List?) {
+      throw CliException(
+        'Field dependencies must be a list, got ${json['dependencies'].runtimeType}',
+      );
+    }
+  }
+
+  String get defaultConfig => '''name: $name
+active: true
+dependencies:
+''';
+
+  bool get canDelete => dependencies.isEmpty;
+
+  String get defaultEntry {
+    final capitalized = name.capitalized;
+    return '''// This is the entry point for $name
+import 'package:mosaic/mosaic.dart';
+import 'package:flutter/widgets.dart';
+
+class $capitalized extends Module {
+  $capitalized() : super(name: '$name');
+
+  @override
+  Future<void> onInit() async {
+    // Load all services here
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Placeholder();
+  }
+
+}
+''';
+  }
+
+  Future<void> createEntry() async {
+    final file = File(utils.join([path, 'lib', '$name.dart']));
+    await file.writeAsString(defaultEntry);
+  }
+
+  Future<void> createConfig() async {
+    final file = File(utils.join([path, Environment.tesseraMark]));
+
+    if (await file.exists()) {
+      throw CliException('File ${file.path} already exists');
+    }
+
+    await file.create();
+    await file.writeAsString(defaultConfig);
   }
 
   final String name;
@@ -71,12 +134,12 @@ class Tessera {
 
   Future<void> enable(Context ctx) async {
     active = true;
-    await _save(ctx);
+    await save(ctx);
   }
 
   Future<void> disable(Context ctx) async {
     active = false;
-    await _save(ctx);
+    await save(ctx);
   }
 
   Future<void> delete(Context ctx) async {
@@ -90,15 +153,34 @@ class Tessera {
     }
   }
 
-  Future<void> _save(Context ctx) async {
+  Future<void> save(Context ctx) async {
     try {
       await ctx.config.write(
-        [path, Environment.tesseraMark].join(Platform.pathSeparator),
+        utils.join([path, Environment.tesseraMark]),
         serialize(),
       );
     } catch (e) {
       print('Error saving the configuration of tessera $name');
       exit(1);
     }
+  }
+
+  Future<int> create() async {
+    final exitCode = await utils.cmd([
+      'flutter',
+      'create',
+      name,
+      '--template',
+      'package',
+    ], path: Directory(path).parent.path);
+
+    if (exitCode != 0) return exitCode;
+
+    await createConfig();
+    await createEntry();
+
+    await utils.install(path: path);
+
+    return 0;
   }
 }

@@ -29,30 +29,15 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-import 'dart:collection';
 import 'dart:io';
+import 'utils/utils.dart';
 
 class Environment {
   static const String projectMarker = 'mosaic.yaml';
   static const String packageMark = 'pubspec.yaml';
   static const String tesseraMark = 'tessera.yaml';
 
-  static String get home => Platform.isWindows
-      ? Platform.environment['USERPROFILE']!
-      : Platform.environment['HOME']!;
-
-  Future<Directory?> root([String? path]) async {
-    Directory curr = Directory.current;
-
-    if (path != null) curr = Directory(path);
-
-    while (curr.path != home && curr.path != curr.parent.path) {
-      if (await _containsFile(curr, projectMarker)) return curr;
-      curr = curr.parent;
-    }
-
-    return null;
-  }
+  Future<Directory?> root([String? path]) => utils.ancestor(projectMarker);
 
   Future<bool> isValid([String? path]) async => await root(path) != null;
 
@@ -60,25 +45,7 @@ class Environment {
     Future<bool> Function(Directory) visitor, [
     String? path,
   ]) async {
-    final curr = await root(path);
-
-    if (curr == null) return;
-
-    final queue = Queue<Directory>();
-
-    queue.add(curr);
-
-    while (queue.isNotEmpty) {
-      final head = queue.removeFirst();
-
-      if (!await visitor(head)) continue;
-
-      final subdir = head.listSync().whereType<Directory>().where(
-        (d) => !_isHiddenDirectory(d),
-      );
-
-      queue.addAll(subdir);
-    }
+    await utils.walk<bool>((acc, c) async => !await visitor(c), path: path);
   }
 
   Future<void> walkCmd(List<String> cmd, [String? path]) async {
@@ -97,7 +64,7 @@ class Environment {
     final files = curr.listSync().whereType<File>();
 
     for (final file in files) {
-      if (_filename(file) == target) return true;
+      if (utils.last(file.path) == target) return true;
     }
 
     return false;
@@ -105,25 +72,22 @@ class Environment {
 
   Future<Set<String>> getExistingTesserae([String? path]) async {
     final tesserae = <String>{};
-    walk((dir) async {
-      if (!isValidPackage(path: dir.path, target: tesseraMark)) return false;
+    await walk((dir) async {
+      if (!isValidPackage(path: dir.path, target: tesseraMark)) return true;
 
       tesserae.add(dir.path);
 
-      return true;
+      return false;
     }, path);
     return tesserae;
   }
 
-  String _filename(File file) =>
-      file.path.split(Platform.pathSeparator).removeLast();
-
-  bool _isHiddenDirectory(Directory dir) {
-    final name = dir.path.split(Platform.pathSeparator).last;
-
-    final hiddens = {'node_modules', 'build'};
-
-    return name.startsWith('.') || hiddens.contains(name);
+  Future<bool> exists(String name) async {
+    final tesserae = await getExistingTesserae();
+    for (final tessera in tesserae) {
+      if (utils.last(tessera) == name) return true;
+    }
+    return false;
   }
 
   Future<bool> _command(List<String> cmd, Directory curr) async {
@@ -144,17 +108,5 @@ class Environment {
     await process.exitCode;
 
     return isValidPackage(path: curr.path);
-  }
-
-  Future<bool> _containsFile(Directory path, String target) async {
-    try {
-      if (!await path.exists()) return false;
-
-      return path.listSync().whereType<File>().any(
-        (f) => _filename(f) == target,
-      );
-    } catch (e) {
-      return false;
-    }
   }
 }

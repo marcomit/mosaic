@@ -29,15 +29,14 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-import 'dart:io';
-
 import 'package:argv/argv.dart';
 
 import 'config.dart';
 import 'enviroment.dart';
 import 'tessera.dart';
 import 'exception.dart';
-import 'gesso.dart';
+import 'utils/gesso.dart';
+import 'utils/utils.dart';
 
 class Context {
   Context({required this.config, required this.env, required this.cli});
@@ -48,7 +47,6 @@ class Context {
 
   Future<Set<Tessera>> tesserae([String? root]) async {
     final result = <Tessera>{};
-    root ??= (await env.root())?.path;
     final paths = await env.getExistingTesserae(root);
 
     for (final path in paths) {
@@ -60,7 +58,9 @@ class Context {
   }
 
   Future<Tessera?> getTesseraFromPath(String path) async {
-    final content = await config.read(path);
+    final content = await config.read(
+      utils.join([path, Environment.tesseraMark]),
+    );
     return Tessera.fromJson(content, path);
   }
 
@@ -68,7 +68,7 @@ class Context {
     final paths = await env.getExistingTesserae();
 
     for (final path in paths) {
-      if (path.split(Platform.pathSeparator).last == name) {
+      if (utils.split(path).last == name) {
         return getTesseraFromPath(path);
       }
     }
@@ -80,5 +80,6 @@ class Context {
     if (!isValid) {
       throw CliException('You are not inside a valid mosaic project'.red);
     }
+    await config.loadFromEnv();
   }
 }
