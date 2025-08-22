@@ -42,27 +42,17 @@ import 'tessera.dart';
 class Mosaic {
   Future<void> tidy(Context ctx) async {
     await ctx.checkEnvironment();
-    print('┌─────────────────────────────────────┐'.dim);
-    print('│ '.dim + 'Tidying tesserae...'.cyan.bold + '              │'.dim);
-    print('└─────────────────────────────────────┘'.dim);
     print('✓ All tesserae organized successfully'.green);
   }
 
   Future<void> _toggleTessera(Context ctx, bool enable) async {
     await ctx.checkEnvironment();
-    final actionGerund = enable ? 'Enabling' : 'Disabling';
     final pastTense = enable ? 'enabled' : 'disabled';
-    final symbol = enable ? '▲' : '▼';
 
     final name = ctx.cli.positional('name');
     if (name == null) throw ArgvException('Missing tessera name');
 
     print('');
-    print('┌─ $actionGerund Tessera ──────────────────┐'.dim);
-    print(
-      '│ '.dim + '$symbol '.brightBlue + name.cyan.bold + ' │'.dim.padRight(42),
-    );
-    print('└─────────────────────────────────────────┘'.dim);
 
     final tessera = await ctx.getTesseraFromName(name);
     if (tessera == null) {
@@ -112,10 +102,6 @@ class Mosaic {
     }
 
     print('');
-    print('┌─ Setting Default Tessera ───────────┐'.dim);
-    print('│ '.dim + '★ '.yellow + name.cyan.bold + ' │'.dim.padRight(42));
-    print('└─────────────────────────────────────┘'.dim);
-
     ctx.config.set('default', name);
     await ctx.config.save();
     print('✓ Default tessera set to '.green + name.bold.green);
@@ -139,12 +125,6 @@ class Mosaic {
     }
 
     print('');
-    print('┌─ Creating Mosaic Project ───────────┐'.dim);
-    print(
-      '│ '.dim + '◆ '.brightMagenta + name.cyan.bold + ' │'.dim.padRight(42),
-    );
-    print('└─────────────────────────────────────┘'.dim);
-    print('');
 
     print('✓ Project structure created'.green);
 
@@ -167,11 +147,6 @@ class Mosaic {
     if (command == null) throw ArgvException('Missing command to execute');
 
     print('');
-    print('┌─ Walking Tesserae ──────────────────┐'.dim);
-    print(
-      '│ '.dim + '→ '.brightBlue + command.cyan.bold + ' │'.dim.padRight(42),
-    );
-    print('└─────────────────────────────────────┘'.dim);
 
     ctx.env.walkCmd([command]);
     print('✓ Command executed across tesserae'.green);
@@ -182,10 +157,6 @@ class Mosaic {
     final root = ctx.cli.positional('path');
     final showPath = ctx.cli.flag('path');
 
-    print('');
-    print('┌─ Tessera Discovery ─────────────────┐'.dim);
-    print('│ '.dim + 'Scanning: '.dim + ' │'.dim.padRight(42));
-    print('└─────────────────────────────────────┘'.dim);
     print('');
 
     final existing = await ctx.tesserae(root);
@@ -242,14 +213,6 @@ class Mosaic {
   Future<void> events(Context ctx) async {
     await ctx.checkEnvironment();
     print('');
-    print('┌─ Building Events ───────────────────┐'.dim);
-    print(
-      '│ '.dim +
-          '⚡ '.yellow +
-          'Processing configuration...'.cyan +
-          ' │'.dim.padRight(42),
-    );
-    print('└─────────────────────────────────────┘'.dim);
     print('✓ Events built successfully'.green);
   }
 
@@ -258,9 +221,6 @@ class Mosaic {
     if (name == null) throw ArgvException('Missing tessera name');
 
     print('');
-    print('┌─ Deleting Tessera ──────────────────┐'.dim);
-    print('│ '.dim + '✗ '.red + name.red.bold + ' │'.dim.padRight(42));
-    print('└─────────────────────────────────────┘'.dim);
 
     print('⚠ Tessera deletion not yet implemented'.yellow);
   }
@@ -282,10 +242,6 @@ class Mosaic {
     if (await ctx.env.exists(name)) {
       throw CliException('Tessera $name already exists');
     }
-    print('');
-    print('┌─ Adding Tessera ────────────────────┐'.dim);
-    print('│ '.dim + '+ '.green + name.cyan.bold + ' │'.dim.padRight(42));
-    print('└─────────────────────────────────────┘'.dim);
     print('');
 
     print('Creating Flutter module...'.dim);

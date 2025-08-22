@@ -33,7 +33,6 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:mosaic/mosaic.dart';
-import 'package:mosaic/src/modules/module_manager.dart';
 import 'package:mosaic/src/routing/route_context.dart';
 import 'package:mosaic/src/routing/route_history_entry.dart';
 
@@ -52,7 +51,7 @@ class InternalRouter with Loggable {
 
   Module get _current => moduleManager.current;
 
-  ModuleEnum get current {
+  String get current {
     if (_history.isEmpty) {
       throw RouterException(
         'Current module does not exists',
@@ -63,7 +62,7 @@ class InternalRouter with Loggable {
     return _history.last.module;
   }
 
-  void init(ModuleEnum defaultModule) {
+  void init(String defaultModule) {
     final entry = RouteHistoryEntry(defaultModule);
     router._history.add(entry);
   }
@@ -72,7 +71,7 @@ class InternalRouter with Loggable {
 
   void pop<T>([T? value]) => _current.pop(value);
 
-  Future<void> go<T>(ModuleEnum moduleName, [T? value]) async {
+  Future<void> go<T>(String moduleName, [T? value]) async {
     if (_disposed) {
       throw RouterException('Router was disposed');
     }
@@ -111,9 +110,9 @@ class InternalRouter with Loggable {
   void _goto<T>({Module? from, T? params}) {
     if (_history.isEmpty) return;
     final module = _history.last.module;
-    if (!moduleManager.activeModules.containsKey(module.name)) return;
+    if (!moduleManager.activeModules.containsKey(module)) return;
 
-    info('current module ${_history.last.module.name}');
+    info('current module ${_history.last.module}');
 
     final to = _tryGetModule(module);
 
@@ -122,20 +121,20 @@ class InternalRouter with Loggable {
     final ctx = RouteTransitionContext(from: from, to: to, params: params);
 
     events.emit<RouteTransitionContext>(
-      ['router', 'change', module.name].join(Events.sep),
+      ['router', 'change', module].join(Events.sep),
       ctx,
     );
   }
 
-  Module _tryGetModule(ModuleEnum m) {
-    if (!moduleManager.activeModules.containsKey(m.name)) {
+  Module _tryGetModule(String m) {
+    if (!moduleManager.activeModules.containsKey(m)) {
       throw RouterException(
-        'Module ${m.name} not registered or not active.',
+        'Module $m not registered or not active.',
         cause: 'Bad initialization or deactivated by configuration',
-        fix: 'try to activate the module ${m.name}',
+        fix: 'try to activate the module $m',
       );
     }
-    return moduleManager.activeModules[m.name]!;
+    return moduleManager.activeModules[m]!;
   }
 
   void _checkDisposed() {
@@ -150,17 +149,15 @@ class InternalRouter with Loggable {
       throw RouterException('Cannot go back', cause: 'Stack history is empty');
     }
 
-    info('Before go back ${_history.map((c) => c.module.name)}');
+    info('Before go back ${_history.map((c) => c.module)}');
 
     final from = _history.removeLast();
 
-    info('Go back to ${_history.last.module.name}');
+    info('Go back to ${_history.last.module}');
 
     _goto(from: _tryGetModule(from.module), params: value);
     if (from.completer.isCompleted) {
-      throw RouterException(
-        'Bad state, ${from.module.name} is already completed',
-      );
+      throw RouterException('Bad state, ${from.module} is already completed');
     }
     from.completer.complete(value);
   }

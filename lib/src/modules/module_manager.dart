@@ -48,8 +48,6 @@ class ModuleManager with Loggable {
   @override
   List<String> get loggerTags => ['module_manager'];
 
-  final _container = DependencyInjector();
-
   /// Map of all registered modules indexed by name.
   // final Map<String, Module> _modules = {};
 
@@ -60,17 +58,7 @@ class ModuleManager with Loggable {
   String? currentModule;
 
   /// All registered modules (read-only view).
-  Map<String, Module> get _modules {
-    final Map<String, Module> result = {};
-    for (final module in _container.instances) {
-      if (module is! Module) {
-        warning('It is registered a non module instance');
-        continue;
-      }
-      result[module.name] = module;
-    }
-    return Map.unmodifiable(result);
-  }
+  final Map<String, Module> _modules = {};
 
   /// Only active modules (read-only view).
   Map<String, Module> get activeModules {
@@ -92,13 +80,16 @@ class ModuleManager with Loggable {
     return _modules[currentModule]!;
   }
 
-  Future<void> register(Module module) async {
-    _container.put(module);
+  Future<void> register<T extends Module>(T module) async {
+    if (_modules.containsKey(module.name)) {
+      throw ModuleException('Module ${module.name} already registered');
+    }
+    _modules[module.name] = module;
     await activateModule(module);
   }
 
-  Future<void> unregister<T extends Module>() async {
-    _container.remove<T>();
+  Future<void> unregister(Module module) async {
+    _modules.remove(module.name);
   }
 
   /// Registers a new module with the manager.
@@ -212,6 +203,7 @@ class ModuleManager with Loggable {
   }
 
   Future<void> initialize() async {
+    info('Initializing ${activeModules.length} modules');
     for (final module in activeModules.values) {
       module.onInit();
     }

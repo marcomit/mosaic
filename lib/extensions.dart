@@ -31,7 +31,6 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
-import 'package:mosaic/src/modules/automodule.dart';
 import 'package:mosaic/src/routing/router.dart';
 import 'package:mosaic/src/signal/consumer_signal.dart';
 import 'package:mosaic/src/signal/signal.dart';
@@ -40,7 +39,7 @@ extension RouteExtension on BuildContext {
   Future<T> push<T>(Widget page) => router.push(page);
   void pop<T>([T? value]) => router.pop(value);
 
-  void go<T>(ModuleEnum name, [T? value]) => router.go(name, value);
+  void go<T>(String name, [T? value]) => router.go(name, value);
   void goBack<T>([T? value]) => router.goBack(value);
 }
 
