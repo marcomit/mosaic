@@ -249,6 +249,16 @@ class Logger {
   /// environment or application version to all logs.
   final Set<String> _defaultTags = {};
 
+  /// Public getter of active dispatchers that handle log output.
+  ///
+  /// Dispatcher are identified by name and can be enabled/disabled
+  /// individually for flexible log routing.
+  /// Override the base class [LoggerDispatcher] to create custom dispatchers.
+  /// Note:
+  /// This is an unmodifiable version of private dispatchers so you cannot modify this object directly
+  Map<String, LoggerDispatcher> get dispatchers =>
+      Map.unmodifiable(_dispatchers);
+
   /// Message wrapper for applying formatting and transformations.
   ///
   /// Wrappers are applied in order before messages are sent to dispatchers.

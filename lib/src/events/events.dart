@@ -158,12 +158,8 @@ typedef EventCallback<T> = void Function(EventContext<T>);
 /// events.deafen(listener);
 /// ```
 class Events {
-  Events._internal();
-
   /// Segment separator for channels (default: `/`).
   static String sep = '/';
-
-  static final _instance = Events._internal();
 
   final List<EventListener> _listeners = [];
 
@@ -423,4 +419,4 @@ class Events {
 }
 
 /// Global event manager instance.
-final events = Events._instance;
+final events = Events();

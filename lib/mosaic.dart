@@ -30,21 +30,14 @@
 */
 library;
 
-export 'src/events/chain.dart';
-export 'src/events/events.dart';
-export 'src/logger/logger.dart';
-export 'src/logger/logger_wrapper.dart';
-export 'src/logger/logger_dispatcher.dart';
-export 'src/signal/signal.dart';
-export 'src/signal/list_signal.dart';
-export 'src/signal/shared_state.dart';
-export 'src/modules/modules.dart';
-export 'src/modules/modular.dart';
-export 'src/modules/injector.dart';
-export 'src/modules/module_manager.dart';
-export 'src/thread_safety/mutex.dart';
-export 'src/thread_safety/semaphore.dart';
-export 'src/thread_safety/autoqueue.dart';
-export 'src/dependency_injection/dependency_injector.dart';
-export 'src/widgets/mosaic_app.dart';
+export 'extensions.dart';
 export 'exceptions.dart';
+export 'src/dependency_injection/dependency_injector.dart';
+export 'src/events/exports.dart';
+export 'src/imc/imc.dart';
+export 'src/logger/exports.dart';
+export 'src/modules/exports.dart';
+export 'src/routing/exports.dart';
+export 'src/signal/exports.dart';
+export 'src/thread_safety/exports.dart';
+export 'src/widgets/mosaic_app.dart';

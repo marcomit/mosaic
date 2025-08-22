@@ -32,6 +32,7 @@
 import 'dart:async';
 
 import 'package:mosaic/exceptions.dart';
+import 'package:mosaic/mosaic.dart';
 import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 import 'package:mosaic/src/events/events.dart';
 import 'package:mosaic/src/logger/logger.dart';
@@ -66,6 +67,9 @@ class ModuleManager with Loggable {
       Map.fromEntries(_modules.entries.where((entry) => entry.value.active)),
     );
   }
+
+  /// Getter of all modules (unmodifiable)
+  Map<String, Module> get modules => Map.unmodifiable(_modules);
 
   /// The currently active module, if any.
   Module get current {
@@ -200,13 +204,6 @@ class ModuleManager with Loggable {
         });
       }),
     );
-  }
-
-  Future<void> initialize() async {
-    info('Initializing ${activeModules.length} modules');
-    for (final module in activeModules.values) {
-      module.onInit();
-    }
   }
 }
 
