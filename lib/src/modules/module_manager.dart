@@ -32,7 +32,6 @@
 import 'dart:async';
 
 import 'package:mosaic/exceptions.dart';
-import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 import 'package:mosaic/src/events/events.dart';
 import 'package:mosaic/src/logger/logger.dart';
 import 'package:mosaic/src/modules/modules.dart';
@@ -80,16 +79,28 @@ class ModuleManager with Loggable {
     return _modules[currentModule]!;
   }
 
-  Future<void> register<T extends Module>(T module) async {
-    if (_modules.containsKey(module.name)) {
-      throw ModuleException('Module ${module.name} already registered');
-    }
-    _modules[module.name] = module;
-    await activateModule(module);
-  }
-
+  /// Unregisters a module with the manager
+  ///
+  /// **Parameters:**
+  /// * [module] the module to unregister.
+  ///
+  /// **Note:**
+  /// * This method trigger the [Module.onDispose] function
+  ///
+  /// **Throws:**
+  /// * [ModuleException] if the module is not already registered
   Future<void> unregister(Module module) async {
+    if (!_modules.containsKey(module.name)) {
+      throw ModuleException(
+        'Trying to unregister an unregistered module ${module.name}',
+      );
+    }
+    await module.dispose();
     _modules.remove(module.name);
+    if (currentModule == module.name) {
+      currentModule = null;
+    }
+    info('Module ${module.name} unregistered');
   }
 
   /// Registers a new module with the manager.
@@ -99,7 +110,7 @@ class ModuleManager with Loggable {
   ///
   /// **Throws:**
   /// * [ArgumentError] if a module with the same name already exists
-  Future<void> registerModule(Module module) async {
+  Future<void> register(Module module) async {
     if (_modules.containsKey(module.name)) {
       throw ArgumentError('Module ${module.name} is already registered');
     }
@@ -110,22 +121,6 @@ class ModuleManager with Loggable {
     // Auto-initialize if this is the default module
     if (defaultModule == module.name) {
       await activateModule(module);
-    }
-  }
-
-  /// Unregisters and disposes a module.
-  ///
-  /// **Parameters:**
-  /// * [name] - Name of the module to unregister
-  Future<void> unregisterModule(String name) async {
-    final module = _modules.remove(name);
-    if (module != null) {
-      await module.dispose();
-      info('Unregistered module $name');
-
-      if (currentModule == name) {
-        currentModule = null;
-      }
     }
   }
 

@@ -142,7 +142,6 @@ abstract class Module with Loggable {
   /// * [name] - Unique identifier for this module
   /// * [fullScreen] - Whether to display in full screen mode
   Module({required this.name, this.fullScreen = false}) {
-    _stateLock.complete();
     info('Module $name created');
   }
 
@@ -155,23 +154,11 @@ abstract class Module with Loggable {
   /// Current lifecycle state of this module.
   ModuleLifecycleState _state = ModuleLifecycleState.uninitialized;
 
-  /// Lock for synchronizing state changes.
-  final Completer<void> _stateLock = Completer<void>();
-
   /// Whether the module is currently performing a state transition.
-  bool _transitioning = false;
+  final Semaphore _lock = Semaphore();
 
   /// Error that caused the module to enter error state, if any.
   Object? _lastError;
-
-  /// Event listeners that need to be cleaned up on disposal.
-  final List<EventListener> _eventListeners = [];
-
-  /// Stream subscriptions that need to be cancelled on disposal.
-  final List<StreamSubscription> _subscriptions = [];
-
-  /// Timer instances that need to be cancelled on disposal.
-  final List<Timer> _timers = [];
 
   @override
   List<String> get loggerTags => [name];
@@ -226,12 +213,7 @@ abstract class Module with Loggable {
     ModuleLifecycleState newState, {
     Object? error,
   }) async {
-    // Wait for any ongoing transitions to complete
-    if (_transitioning) {
-      await _stateLock.future;
-    }
-
-    _transitioning = true;
+    await _lock.acquire();
     final oldState = _state;
     _state = newState;
     _lastError = error;
@@ -245,7 +227,7 @@ abstract class Module with Loggable {
       true, // retain for late subscribers
     );
 
-    _transitioning = false;
+    _lock.release();
   }
 
   /// Initializes the module and transitions it to active state.
@@ -342,27 +324,10 @@ abstract class Module with Loggable {
     try {
       info('Disposing module $name');
 
-      // Clear navigation stack
       clear();
 
-      // Cancel all subscriptions and timers
-      await Future.wait([
-        ..._subscriptions.map((s) => Future(() => s.cancel())),
-        ..._timers.map((t) => Future(() => t.cancel())),
-      ]);
-      _subscriptions.clear();
-      _timers.clear();
-
-      // Remove event listeners
-      for (final listener in _eventListeners) {
-        events.deafen(listener);
-      }
-      _eventListeners.clear();
-
-      // Custom disposal logic
       await onDispose();
 
-      // Dispose dependency injection container
       di.clear();
 
       await _transitionTo(ModuleLifecycleState.disposed);

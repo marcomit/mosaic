@@ -148,7 +148,7 @@ class Mosaic {
 
     print('');
 
-    ctx.env.walkCmd([command]);
+    ctx.env.walkCmd(command.split(' '));
     print('✓ Command executed across tesserae'.green);
   }
 

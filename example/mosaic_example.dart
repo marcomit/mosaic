@@ -1,15 +1,8 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:mosaic/mosaic.dart';
 
-class Test extends StatefulWidget {
-  const Test({super.key});
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-  @override
-  State<Test> createState() => _TestState();
-}
-
-class _TestState extends State<Test> {
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
-  }
+  runApp(const MaterialApp(home: MosaicScope()));
 }
