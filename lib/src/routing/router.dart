@@ -33,8 +33,6 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:mosaic/mosaic.dart';
-import 'package:mosaic/src/routing/route_context.dart';
-import 'package:mosaic/src/routing/route_history_entry.dart';
 
 class InternalRouter with Loggable {
   InternalRouter._internal();
@@ -49,8 +47,19 @@ class InternalRouter with Loggable {
 
   final List<RouteHistoryEntry> _history = [];
 
+  /// This is the stack of the navigation history throw modules
+  ///
+  /// When you change the module, an entry will pushed here
+  /// When you go to the previous module with (calling [goBack]) the entry will popped
+  /// and the [push] call will be completed
+  List<RouteHistoryEntry> get history => List.unmodifiable(_history);
+
   Module get _current => moduleManager.current;
 
+  /// Returns the current module
+  ///
+  /// By default it is null and setted during initialization
+  /// If it is not initialized it throws [RouterException]
   String get current {
     if (_history.isEmpty) {
       throw RouterException(
@@ -62,15 +71,38 @@ class InternalRouter with Loggable {
     return _history.last.module;
   }
 
+  /// Initialize the router with the default module
+  ///
+  /// It ensure that the history has one entry.
+  /// This function should be called during module initialization
   void init(String defaultModule) {
     final entry = RouteHistoryEntry(defaultModule);
     router._history.add(entry);
   }
 
+  /// Push a widget into the current module
+  ///
+  /// Call this function to push a page in the stack of the module
+  /// Parameters:
+  /// * [widget] is the widget to be rendered
+  /// Returns a [Future] and return the value passed from the [pop] function (the value is optional)
   Future<T> push<T>(Widget widget) => _current.push(widget);
 
+  /// It pops the last entry from the current module stack
+  ///
+  /// It removes the last entry.
+  /// Parameters:
+  /// * [value] it is the value that will be passed to the corresponding [push] function
   void pop<T>([T? value]) => _current.pop(value);
 
+  /// Function to change the current module
+  ///
+  /// Push an entry into the global stack and change the current module into the passed [moduleName]
+  /// Parameters:
+  /// * [moduleName] the module you want to go
+  /// * [value] you can pass data through modules' transition
+  ///
+  /// If the router is disposed throws [RouterException]
   Future<void> go<T>(String moduleName, [T? value]) async {
     if (_disposed) {
       throw RouterException('Router was disposed');
@@ -143,6 +175,12 @@ class InternalRouter with Loggable {
     }
   }
 
+  /// This is used to go to the previous module
+  ///
+  /// Parameters:
+  /// * [value] Value passed into this function will be available from the corresponding [go] call
+  /// that will be completed
+  /// If you call this function after dispose it throws [RouterException]
   void goBack<T>([T? value]) {
     _checkDisposed();
     if (_history.isEmpty) {
@@ -162,11 +200,20 @@ class InternalRouter with Loggable {
     from.completer.complete(value);
   }
 
+  /// This method clear the navigation stack of the current module
+  ///
+  /// Use this method to return to the initial page of the module
+  /// By calling this function all the Future of [Module.push] will be completed.
   void clear() {
     info('Clearing the module ${_current.name}');
     _current.clear();
   }
 
+  /// Dispose all the entries accumulated and clear the stack.
+  ///
+  /// All Future will be completed and cleared.
+  /// Each stack of the module will be deleted.
+  /// After colling this function the router will be unusable because every operation will throws [RouterException]
   void dispose() {
     if (_disposed) {
       warning('Router already disposed');

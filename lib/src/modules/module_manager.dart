@@ -66,6 +66,9 @@ class ModuleManager with Loggable {
     );
   }
 
+  /// Getter of all modules (unmodifiable)
+  Map<String, Module> get modules => Map.unmodifiable(_modules);
+
   /// The currently active module, if any.
   Module get current {
     if (currentModule == null) {
@@ -195,13 +198,6 @@ class ModuleManager with Loggable {
         });
       }),
     );
-  }
-
-  Future<void> initialize() async {
-    info('Initializing ${activeModules.length} modules');
-    for (final module in activeModules.values) {
-      module.onInit();
-    }
   }
 }
 

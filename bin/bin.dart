@@ -52,6 +52,7 @@ Argv setupCli() {
   }
 
   final app = Argv('mosaic', 'Modular architecture')
+    ..command('run', description: 'Run the app')
     ..command(
       'walk',
       description: 'Execute the command in all tesserae',
