@@ -22,7 +22,7 @@ class YamlEncoding {
     } else if (value is String) {
       return _isMultilineString(value)
           ? _formatMultilineString(value, context)
-          : _formatSingleLineString(value, context);
+          : _formatSingleLineString(value);
     } else if (value == null) {
       return '';
     } else {
@@ -34,7 +34,7 @@ class YamlEncoding {
     required Map<String, dynamic> structure,
     required _Context context,
   }) {
-    String separator_(MapEntry<String, dynamic> e) =>
+    String separator(MapEntry<String, dynamic> e) =>
         e.value is Map ? '\n${_indentation(context.nest())}' : ' ';
 
     if (structure.isEmpty) {
@@ -43,12 +43,12 @@ class YamlEncoding {
     final entries = structure.entries;
     final firstElement = entries.first;
     final first =
-        '${firstElement.key}:${separator_(firstElement)}${_formatObject(value: firstElement.value, context: context.nest())}\n';
+        '${_formatSingleLineString(firstElement.key)}:${separator(firstElement)}${_formatObject(value: firstElement.value, context: context.nest())}\n';
     final rest = entries
         .skip(1)
         .map(
           (e) =>
-              '${_indentation(context)}${e.key}:${separator_(e)}'
+              '${_indentation(context)}${e.key}:${separator(e)}'
               '${_formatObject(value: e.value, context: context.nest())}',
         )
         .join('\n');
@@ -90,7 +90,7 @@ class YamlEncoding {
   String _indentMultilineString(String value, String indentation) =>
       value.split('\n').map((s) => '$indentation$s').join('\n');
 
-  String _formatSingleLineString(String value, _Context ctx) =>
+  String _formatSingleLineString(String value) =>
       _requiresQuotes(value) ? '\'$value\'' : value;
 
   bool _requiresQuotes(String s) =>

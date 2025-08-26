@@ -16,7 +16,9 @@ dependencies:
   http: ^1.4.0
   archive: ^4.0.7
   path: ^1.9.1
-  argv: ^1.0.2
+  # argv: ^1.0.3
+  argv:
+    path: ../argv
 
 executables:
   mosaic: bin

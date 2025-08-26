@@ -106,25 +106,62 @@ class ModuleManager with Loggable {
     info('Module ${module.name} unregistered');
   }
 
+  /// Initialize all registered modules
+  ///
+  /// It try to load modules sorted by dependencies.
+  /// It means that a module wait that all dependencies are initialized.
+  ///
+  /// **Throws:**
+  /// * [ModuleException] If it detect a circular dependency
+  Future<void> initialize() async {
+    final sorted = _sortByDeps(modules.values);
+
+    for (final module in sorted) {
+      await module.initialize();
+    }
+  }
+
+  List<Module> _sortByDeps(Iterable<Module> modules) {
+    final sorted = <Module>[];
+    final resolved = <String>{};
+
+    void visit(Module m, [Set<String> path = const {}]) {
+      if (path.contains(m.name)) {
+        throw ModuleException(
+          'Circular dependency detected',
+          cause: 'This was the circle ${path.join(' -> ')}',
+        );
+      }
+
+      if (resolved.contains(m.name)) return;
+
+      for (final dep in m.dependencies) {
+        visit(dep, {...path, m.name});
+      }
+
+      sorted.add(m);
+      resolved.add(m.name);
+    }
+
+    modules.forEach(visit);
+
+    return sorted;
+  }
+
   /// Registers a new module with the manager.
   ///
   /// **Parameters:**
   /// * [module] - The module to register
   ///
   /// **Throws:**
-  /// * [ArgumentError] if a module with the same name already exists
+  /// * [ModuleException] if a module with the same name already exists
   Future<void> register(Module module) async {
     if (_modules.containsKey(module.name)) {
-      throw ArgumentError('Module ${module.name} is already registered');
+      throw ModuleException('Module ${module.name} is already registered');
     }
 
     _modules[module.name] = module;
     info('Registered module ${module.name}');
-
-    // Auto-initialize if this is the default module
-    if (defaultModule == module.name) {
-      await activateModule(module);
-    }
   }
 
   /// Activates a module, making it the current active module.

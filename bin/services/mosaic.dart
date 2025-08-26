@@ -39,7 +39,7 @@ import '../exception.dart';
 import '../tessera.dart';
 
 /// Mosaic in this case refers like the orchestrator of the tesserae
-class Mosaic {
+class MosaicService {
   Future<void> tidy(ArgvResult cli) async {
     print('✓ All tesserae organized successfully'.green);
   }

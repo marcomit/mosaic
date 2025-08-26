@@ -33,7 +33,6 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mosaic/mosaic.dart';
-import 'package:mosaic/src/routing/route_context.dart';
 
 /// Lifecycle states for module management.
 ///
@@ -140,7 +139,7 @@ abstract class Module with Loggable {
   ///
   /// **Parameters:**
   /// * [name] - Unique identifier for this module
-  /// * [fullScreen] - Whether to display in full screen mode
+  /// * [fullScreen] - Whether to display in full screen mode (coming soon...)
   Module({required this.name, this.fullScreen = false}) {
     info('Module $name created');
   }
@@ -183,6 +182,8 @@ abstract class Module with Loggable {
 
   /// Internal navigation stack for this module.
   final List<InternalRoute> _stack = [];
+
+  final List<Module> dependencies = [];
 
   /// Current navigation stack as an iterable of widgets.
   ///

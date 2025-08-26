@@ -76,10 +76,10 @@ class _ImpTypedCallback<TResult, TParams> {
 /// Use contracts for better performance in high-frequency scenarios.
 ///
 /// **When to use:**
-/// - Use contracts ([put]/[get]) for type safety within your team
-/// - Use string calls ([register]/[call]) for loose coupling between modules
+/// - Use contracts ([IMC.put]/[IMC.get]) for type safety within your team
+/// - Use string calls ([IMC.register]/[IMC.call]) for loose coupling between modules
 ///
-/// Shorthand for [call] method - allows using IMC instance as a function
+/// Shorthand for [IMC.call] method - allows using IMC instance as a function
 ///
 /// Example: `await imc<User, String>('user.getUser', 'id123')`
 abstract class IMCContract {
