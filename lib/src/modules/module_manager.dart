@@ -31,11 +31,7 @@
 
 import 'dart:async';
 
-import 'package:mosaic/exceptions.dart';
-import 'package:mosaic/src/events/events.dart';
-import 'package:mosaic/src/logger/logger.dart';
-import 'package:mosaic/src/modules/modules.dart';
-import 'package:mosaic/src/routing/route_context.dart';
+import 'package:mosaic/mosaic.dart';
 
 /// Manages all modules in the application and provides centralized control
 /// over module lifecycle, error handling, and state management.
@@ -50,14 +46,16 @@ class ModuleManager with Loggable {
   /// Map of all registered modules indexed by name.
   // final Map<String, Module> _modules = {};
 
-  /// Name of the default module to use when none is specified.
-  String? defaultModule;
+  Module? _defaultModule;
 
   /// Name of the currently active module.
   String? currentModule;
 
   /// All registered modules (read-only view).
   final Map<String, Module> _modules = {};
+
+  /// Name of the default module to use when none is specified.
+  Module? get defaultModule => _defaultModule;
 
   /// Only active modules (read-only view).
   Map<String, Module> get activeModules {
@@ -113,12 +111,14 @@ class ModuleManager with Loggable {
   ///
   /// **Throws:**
   /// * [ModuleException] If it detect a circular dependency
-  Future<void> initialize() async {
+  Future<void> initialize(Module start) async {
+    _defaultModule = start;
     final sorted = _sortByDeps(modules.values);
 
     for (final module in sorted) {
       await module.initialize();
     }
+    router.init(start.name);
   }
 
   List<Module> _sortByDeps(Iterable<Module> modules) {
@@ -216,7 +216,7 @@ class ModuleManager with Loggable {
 
     _modules.clear();
     currentModule = null;
-    defaultModule = null;
+    _defaultModule = null;
 
     info('All modules disposed');
   }

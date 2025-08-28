@@ -57,10 +57,6 @@ version: 1.0.0
 
 default: $name
 
-default_level: debug
-
-debug:
-  logger: debug
 events:
 ''';
   }

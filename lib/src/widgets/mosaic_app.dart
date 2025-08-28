@@ -32,9 +32,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:mosaic/mosaic.dart';
-import 'package:mosaic/src/events/events_mixin.dart';
-import 'package:mosaic/src/modules/module_manager.dart';
-import 'package:mosaic/src/routing/route_context.dart';
 
 class MosaicScope extends StatefulWidget {
   const MosaicScope({super.key});
@@ -63,7 +60,7 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
   void initState() {
     super.initState();
 
-    _currentModule = moduleManager.defaultModule;
+    _currentModule = moduleManager.defaultModule?.name;
     _setIndex();
 
     on<Key>('router/push', _refresh);

@@ -29,4 +29,151 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-class EventService {}
+import 'dart:io';
+
+import 'package:argv/argv.dart';
+import '../utils/gesso.dart';
+import '../context.dart';
+import '../utils/utils.dart';
+
+extension on String {
+  String capitalize() {
+    return this[0].toUpperCase() + substring(1);
+  }
+}
+
+class _Layer {
+  _Layer(this.val, this.children);
+
+  String val;
+  List<_Layer> children;
+
+  bool get isLeaf {
+    if (children.isEmpty) return true;
+    for (final child in children) {
+      if (!child.isWildCard) return false;
+    }
+    return true;
+  }
+
+  bool get isWildCard => {'*', '#'}.contains(val);
+
+  bool get containsOnlyLeaf {
+    for (final child in children) {
+      if (!child.isLeaf) return false;
+    }
+    return true;
+  }
+
+  String get className => '${val.capitalize()}Node';
+
+  void extend(Map<String, dynamic> json, [int depth = 0]) {
+    for (final key in json.keys) {
+      final layer = _Layer(key, []);
+      children.add(layer);
+      layer.extend(json[key], depth + 1);
+    }
+  }
+
+  String? prop([_Layer? parent]) {
+    if (isWildCard) return null;
+    String param = 'super.topic';
+    if (!isLeaf) param = '\'$val\'';
+    return '$className get $val => $className($param);';
+  }
+
+  @override
+  String toString([_Layer? parent]) {
+    final props = [];
+
+    final Set<String> mixins = {};
+
+    for (final child in children) {
+      final property = child.prop(parent);
+
+      if (property != null) props.add(property);
+      if (child.val == '*') {
+        mixins.add('Id');
+      } else if (child.val == '#') {
+        mixins.add('Param');
+      }
+    }
+
+    String nodeMixin = '';
+
+    if (mixins.isNotEmpty) {
+      nodeMixin = ' with ${mixins.join(', ')}';
+    }
+
+    final String superParam =
+        '''(super.topic) {
+    \$('$val');
+  }''';
+
+    final classes = [
+      '''
+class $className extends Segment$nodeMixin {
+  ${props.join('\n  ')}
+  $className$superParam
+}
+      ''',
+    ];
+
+    for (final child in children) {
+      if (child.isWildCard) continue;
+      classes.add(child.toString(this));
+    }
+    return classes.reversed.join('\n\n');
+  }
+}
+
+class EventService {
+  Future<void> generate(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    final root = await ctx.env.root();
+
+    // This is not possible because this method is protected by checkEnvironment
+    if (root == null) return;
+
+    final events = ctx.config.get('events') ?? <String, dynamic>{};
+    final name = ctx.config.get('name');
+    final path = utils.join([root.path, name, 'lib', 'events.dart']);
+
+    print(events);
+    await utils.ensureExists(path);
+
+    await _saveFile(path, events);
+
+    print('');
+    print('✓ Events built successfully'.green);
+  }
+
+  Future<String> _generate(Map<String, dynamic> json) async {
+    final _Layer head = _Layer('', []);
+    head.extend(json);
+
+    final content = head.children.map((c) => c.toString()).join('\n\n');
+
+    final headProps = head.children.map((child) {
+      return '${child.className} get ${child.val} => ${child.className}();';
+    });
+    return '''
+import 'package:mosaic/mosaic.dart';
+
+{Context.banner}
+
+$content
+
+mixin HeadNode {
+  ${headProps.join('\n  ')}
+}
+''';
+  }
+
+  Future<void> _saveFile(String path, Map<String, dynamic> json) async {
+    final file = File(path);
+
+    final content = await _generate(json);
+    await file.writeAsString(content);
+  }
+}

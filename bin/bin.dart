@@ -43,15 +43,21 @@ Argv setupContext(Argv app) {
   final config = Configuration();
   final env = Environment();
   final ctx = Context(config: config, env: env);
+  final mosaic = MosaicService();
+  final event = EventService();
+  final tessera = TesseraService();
 
-  return app
-      .set<Context>(ctx)
-      .set<MosaicService>(MosaicService())
-      .set<TesseraService>(TesseraService())
-      .set<EventService>(EventService());
+  return app.set(ctx).set(mosaic).set(tessera).set(event);
 }
 
 void check(ArgvResult cli) => cli.get<Context>().checkEnvironment();
+
+ArgvCallback require(String name) {
+  return (res) {
+    if (res.positional(name) != null) return;
+    throw CliException('Missing positional argument $name');
+  };
+}
 
 Argv setupCli() {
   final app = setupContext(Argv('mosaic', 'Modular architecture'))
@@ -66,7 +72,7 @@ Argv setupCli() {
         .flag('path', abbr: 'p')
         .flag('deps', abbr: 'd')
         .on(check)
-        .use<MosaicService>((MosaicService m) => m.list as ArgvCallback)
+        .use<MosaicService>((MosaicService m) => m.list)
     ..command(
       'create',
       description: 'Create a new mosaic project',
@@ -74,7 +80,7 @@ Argv setupCli() {
     ..command(
       'add',
       description: 'Add a tessera',
-    ).positional('name').on(check).use<MosaicService>((m) => m.add)
+    ).positional('name').on(check).use<TesseraService>((t) => t.add)
     ..command('delete', description: 'Delete a tessera')
         .positional('name')
         .flag('force', abbr: 'f', defaultTo: false)
@@ -85,13 +91,17 @@ Argv setupCli() {
       description: 'Add to the root project all existing tesserae',
     ).on(check).use<MosaicService>((m) => m.tidy)
     ..command(
+      'sync',
+      description: 'Sync all tesserae and generate the initialization file',
+    ).on(check).use<MosaicService>((m) => m.sync)
+    ..command(
       'enable',
       description: 'Enable a tessera',
-    ).positional('name').on(check).use<MosaicService>((m) => m.enable)
+    ).positional('name').on(check).use<TesseraService>((t) => t.enable)
     ..command(
       'disable',
       description: 'Disable a tessera',
-    ).positional('name').on(check).use<MosaicService>((m) => m.disable)
+    ).positional('name').on(check).use<TesseraService>((t) => t.disable)
     ..command(
       'default',
       description: 'Set the default tessera',
@@ -99,7 +109,30 @@ Argv setupCli() {
     ..command(
       'events',
       description: 'Build the events based on the configuration file',
-    ).use<MosaicService>((m) => m.events);
+    ).on(check).use<EventService>((e) => e.generate);
+
+  final deps = app.command('deps');
+  final depsadd = deps.command(
+    'add',
+    description: 'Adds a dependency to a tessera',
+  );
+  final depsrem = deps.command(
+    'remove',
+    description: 'Removes a dependency from a tessera',
+  );
+
+  Argv.group(
+    [depsadd, depsrem],
+    (c) => c
+        .positional('tessera')
+        .positional('dependency')
+        .on(require('tessera'))
+        .on(require('dependency')),
+  );
+
+  depsadd.use<TesseraService>((t) => t.depsAdd);
+  depsrem.use<TesseraService>((t) => t.depsRemove);
+
   return app;
 }
 

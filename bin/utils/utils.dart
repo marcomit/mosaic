@@ -161,8 +161,16 @@ class Utils {
     }, path: path);
   }
 
-  Future<void> install({String? path, String name = 'mosaic'}) {
-    return utils.cmd(['flutter', 'pub', 'add', name], path: path);
+  Future<int> install({
+    String? path,
+    String name = 'mosaic',
+    String? packagePath,
+  }) async {
+    final args = ['flutter', 'pub', 'add', name];
+
+    if (packagePath != null) args.addAll(['--path', packagePath]);
+
+    return utils.cmd(args, path: path, out: true);
   }
 
   String parent(String path) => Directory(path).parent.path;
@@ -176,6 +184,13 @@ class Utils {
       await dir.create(recursive: true);
     }
     return splitted.last;
+  }
+
+  Future<File> ensureExists(String file) async {
+    final f = File(file);
+    if (await f.exists()) return f;
+    await f.create(recursive: true);
+    return f;
   }
 }
 

@@ -35,50 +35,29 @@ import 'package:argv/argv.dart';
 import '../context.dart';
 import '../utils/gesso.dart';
 import '../utils/utils.dart';
-import '../exception.dart';
-import '../tessera.dart';
 
 /// Mosaic in this case refers like the orchestrator of the tesserae
 class MosaicService {
   Future<void> tidy(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    await ctx.env.walkCmd(['flutter', 'pub', 'get']);
+
     print('✓ All tesserae organized successfully'.green);
   }
 
-  Future<void> _toggleTessera(ArgvResult cli, bool enable) async {
+  Future<void> sync(ArgvResult cli) async {
     final ctx = cli.get<Context>();
-    final pastTense = enable ? 'enabled' : 'disabled';
+    final content = await ctx.getInitializationFile();
 
-    final name = cli.positional('name');
-    if (name == null) throw ArgvException('Missing tessera name');
+    final name = ctx.config.get('name');
+    final root = await ctx.env.root();
 
-    print('');
+    final path = utils.join([root!.path, name, 'lib', 'init.dart']);
 
-    final tessera = await ctx.getTesseraFromName(name);
-    if (tessera == null) {
-      print('');
-      print('✗ Tessera '.red.bold + name.bold + ' not found'.red.bold);
-      print(
-        '  Use '.dim + 'mosaic list'.cyan + ' to see available tesserae'.dim,
-      );
-      exit(1);
-    }
+    final file = await utils.ensureExists(path);
 
-    if (enable) {
-      await tessera.enable(ctx);
-    } else {
-      await tessera.disable(ctx);
-    }
-
-    print('');
-    print(
-      '✓ Tessera '.green.bold +
-          name.bold.green +
-          ' $pastTense successfully'.green.bold,
-    );
+    await file.writeAsString(content);
   }
-
-  Future<void> enable(ArgvResult cli) => _toggleTessera(cli, true);
-  Future<void> disable(ArgvResult cli) => _toggleTessera(cli, false);
 
   Future<void> setDefault(ArgvResult cli) async {
     final ctx = cli.get<Context>();
@@ -107,14 +86,13 @@ class MosaicService {
   }
 
   Future<void> create(ArgvResult cli) async {
-    print('prprprprp');
     final ctx = cli.get<Context>();
     String? name = cli.positional('name');
     if (name == null) throw ArgvException('Missing project name');
 
     if (await ctx.env.isValid()) {
       throw ArgvException(
-        'Already inside a mosaic project (subprojects coming soon)',
+        'Already inside a mosaic project (sub-mosaics coming soon)',
       );
     }
 
@@ -122,18 +100,20 @@ class MosaicService {
 
     final root = Directory(name);
     if (await root.exists()) {
-      throw ArgvException('Project $name already exists');
+      throw ArgvException('Mosaic $name already exists');
     }
 
     print('');
 
-    print('✓ Project structure created'.green);
+    print('✓ Project configurations'.green);
 
     await ctx.config.createDefaultConfigFile(name, root.path);
 
     await utils.cmd(['flutter', 'create', name], path: root.path);
+    print('✓ Project structure created'.green);
 
-    await utils.install(path: root.path);
+    final code = await utils.install(path: utils.join([root.path, name]));
+    print('Cod: $code');
 
     print('✓ Mosaic marker initialized'.green);
     print('');
@@ -212,11 +192,6 @@ class MosaicService {
     }
   }
 
-  Future<void> events(ArgvResult cli) async {
-    print('');
-    print('✓ Events built successfully'.green);
-  }
-
   void delete(ArgvResult cli) {
     final name = cli.positional('name');
     if (name == null) throw ArgvException('Missing tessera name');
@@ -224,41 +199,6 @@ class MosaicService {
     print('');
 
     print('⚠ Tessera deletion not yet implemented'.yellow);
-  }
-
-  Future<void> add(ArgvResult cli) async {
-    final ctx = cli.get<Context>();
-    Directory root = (await ctx.env.root())!;
-    String? name = cli.positional('name');
-
-    if (name == null) {
-      throw const CliException('Missing tessera name');
-    }
-
-    root = Directory(utils.parent(name));
-    name = await utils.ensureExistsParent(name);
-
-    if (await ctx.env.exists(name)) {
-      throw CliException('Tessera $name already exists');
-    }
-    print('');
-
-    print('Creating Flutter module...'.dim);
-    final tessera = Tessera(
-      name,
-      path: utils.join([root.path, name]),
-      active: true,
-    );
-    final code = await tessera.create();
-    if (code == 0) {
-      print('');
-      print(
-        '✓ Tessera '.green + name.bold.green + ' created successfully'.green,
-      );
-    } else {
-      print('');
-      print('✗ Failed to create tessera '.red + name.bold);
-    }
   }
 
   Future<void> status(ArgvResult cli) async {
@@ -269,13 +209,5 @@ class MosaicService {
     } else {
       print('Project root: ${root.path}');
     }
-  }
-}
-
-// Extension to truncate strings for display
-extension StringTruncate on String {
-  String truncate(int maxLength) {
-    if (length <= maxLength) return this;
-    return '${substring(0, maxLength - 3)}...';
   }
 }

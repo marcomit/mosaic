@@ -91,7 +91,6 @@ class Environment {
   }
 
   Future<bool> _command(List<String> cmd, Directory curr) async {
-    print('Execute command on ${curr.path}');
     final process = await Process.start(
       cmd[0],
       cmd.sublist(1),

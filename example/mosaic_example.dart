@@ -6,7 +6,7 @@ Future<void> main() async {
 
   final entry = Main();
   await moduleManager.register(entry);
-  moduleManager.defaultModule = entry.name;
+  moduleManager.initialize(entry);
 
   runApp(const MaterialApp(home: MosaicScope()));
 }

@@ -32,11 +32,11 @@ import 'dart:io';
 
 import 'package:argv/argv.dart';
 
-import '../context.dart';
-import '../utils/gesso.dart';
-import '../utils/utils.dart';
-import '../exception.dart';
-import '../tessera.dart';
+import 'utils/gesso.dart';
+import 'utils/utils.dart';
+import 'context.dart';
+import 'exception.dart';
+import 'tessera.dart';
 
 /// Mosaic in this case refers like the orchestrator of the tesserae
 class Mosaic {
