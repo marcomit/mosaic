@@ -41,56 +41,49 @@ import '../tessera.dart';
 class TesseraService {
   Future<void> add(ArgvResult cli) async {
     final ctx = cli.get<Context>();
-    Directory root = (await ctx.env.root())!;
+    final root = (await ctx.env.root())!;
     String? name = cli.positional('name');
 
     if (name == null) {
       throw const CliException('Missing tessera name');
     }
 
-    root = Directory(utils.parent(name));
     name = await utils.ensureExistsParent(name);
 
     if (await ctx.env.exists(name)) {
       throw CliException('Tessera $name already exists');
     }
-    print('');
 
-    print('Creating Flutter module...'.dim);
+    print('Creating tessera '.dim + name.cyan.bold + '...'.dim);
+
     final tessera = Tessera(
       name,
       path: utils.join([root.path, name]),
       active: true,
     );
+
     final code = await tessera.create();
+
     if (code == 0) {
-      print('');
-      print(
-        '✓ Tessera '.green + name.bold.green + ' created successfully'.green,
-      );
+      print('✓ '.green + 'Tessera '.dim + name.cyan.bold + ' created'.green);
     } else {
-      print('');
-      print('✗ Failed to create tessera '.red + name.bold);
+      print('✗ '.red + 'Failed to create tessera '.dim + name.red);
+      exit(1);
     }
   }
 
   Future<void> _toggleTessera(ArgvResult cli, bool enable) async {
     final ctx = cli.get<Context>();
-    final pastTense = enable ? 'enabled' : 'disabled';
-
     final name = cli.positional('name');
-    if (name == null) throw ArgvException('Missing tessera name');
+    final action = enable ? 'enabled' : 'disabled';
 
-    print('');
+    if (name == null) throw ArgvException('Missing tessera name');
 
     final tessera = await ctx.getTesseraFromName(name);
     if (tessera == null) {
-      print('');
-      print('✗ Tessera '.red.bold + name.bold + ' not found'.red.bold);
-      print(
-        '  Use '.dim + 'mosaic list'.cyan + ' to see available tesserae'.dim,
-      );
-      exit(1);
+      print('✗ '.red + 'Tessera '.dim + name.red + ' not found'.dim);
+      print('Use '.dim + 'mosaic list'.cyan + ' to see available tesserae'.dim);
+      return;
     }
 
     if (enable) {
@@ -99,64 +92,70 @@ class TesseraService {
       await tessera.disable(ctx);
     }
 
-    print('');
-    print(
-      '✓ Tessera '.green.bold +
-          name.bold.green +
-          ' $pastTense successfully'.green.bold,
-    );
+    print('✓ '.green + 'Tessera '.dim + name.cyan + ' $action'.dim);
   }
 
   Future<void> enable(ArgvResult cli) => _toggleTessera(cli, true);
   Future<void> disable(ArgvResult cli) => _toggleTessera(cli, false);
 
-  Future<void> depsRemove(ArgvResult cli) async {
-    final ctx = cli.get<Context>();
-    final name = cli.positional('tessera');
-    final dependency = cli.positional('dependency');
-
-    final tessera = await prepareDeps(cli);
-
-    if (!tessera.dependencies.remove(dependency)) {
-      throw CliException('Dependency $dependency not found in $name tessera');
-    }
-
-    await tessera.save(ctx);
-  }
-
   Future<void> depsAdd(ArgvResult cli) async {
     final ctx = cli.get<Context>();
+    final tessera = await _prepareDeps(cli);
     final dependency = cli.positional('dependency')!;
-
-    final tessera = await prepareDeps(cli);
 
     if (tessera.dependencies.contains(dependency)) {
       throw CliException('Dependency $dependency already exists');
     }
-    tessera.dependencies.add(dependency);
 
+    tessera.dependencies.add(dependency);
     await tessera.save(ctx);
+
+    print(
+      '✓ '.green +
+          'Added dependency '.dim +
+          dependency.cyan +
+          ' to '.dim +
+          tessera.name.cyan,
+    );
   }
 
-  Future<Tessera> prepareDeps(ArgvResult cli) async {
+  Future<void> depsRemove(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    final tessera = await _prepareDeps(cli);
+    final dependency = cli.positional('dependency')!;
+
+    if (!tessera.dependencies.remove(dependency)) {
+      throw CliException('Dependency $dependency not found');
+    }
+
+    await tessera.save(ctx);
+    print(
+      '✓ '.green +
+          'Removed dependency '.dim +
+          dependency.red +
+          ' from '.dim +
+          tessera.name.cyan,
+    );
+  }
+
+  Future<Tessera> _prepareDeps(ArgvResult cli) async {
     final ctx = cli.get<Context>();
     final name = cli.positional('tessera')!;
     final dependency = cli.positional('dependency')!;
 
     if (!await ctx.env.exists(name)) {
-      throw CliException('$name does not exist in this mosaic');
+      throw CliException('Tessera $name not found');
     }
 
     if (!await ctx.env.exists(dependency)) {
-      throw CliException(
-        '$dependency is not a valid dependency because it does not exists',
-      );
+      throw CliException('Dependency $dependency does not exist');
     }
 
     final tessera = await ctx.getTesseraFromName(name);
     if (tessera == null) {
-      throw CliException('Tessera $name not found');
+      throw CliException('Failed to load tessera $name');
     }
+
     return tessera;
   }
 }

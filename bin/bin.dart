@@ -146,8 +146,8 @@ void main(List<String> args) async {
     print(mosaic.usage());
   } on CliException catch (e) {
     print(e);
-  } catch (e, stack) {
+  } catch (e) {
     print('Unknown error $e');
-    print(stack);
+    // print(stack);
   }
 }

@@ -131,48 +131,39 @@ class EventService {
   Future<void> generate(ArgvResult cli) async {
     final ctx = cli.get<Context>();
     final root = await ctx.env.root();
-
-    // This is not possible because this method is protected by checkEnvironment
-    if (root == null) return;
-
     final events = ctx.config.get('events') ?? <String, dynamic>{};
     final name = ctx.config.get('name');
-    final path = utils.join([root.path, name, 'lib', 'events.dart']);
+    final path = utils.join([root!.path, name, 'lib', 'events.dart']);
 
-    print(events);
-    await utils.ensureExists(path);
-
+    print('Generating event tree...'.dim);
     await _saveFile(path, events);
-
-    print('');
-    print('✓ Events built successfully'.green);
+    print('✓ '.green + 'Events generated at '.dim + 'lib/events.dart'.cyan);
   }
 
   Future<String> _generate(Map<String, dynamic> json) async {
-    final _Layer head = _Layer('', []);
-    head.extend(json);
+    final layer = _Layer('', []);
+    layer.extend(json);
 
-    final content = head.children.map((c) => c.toString()).join('\n\n');
-
-    final headProps = head.children.map((child) {
+    final content = layer.children.map((c) => c.toString()).join('\n\n');
+    final headProps = layer.children.map((child) {
       return '${child.className} get ${child.val} => ${child.className}();';
     });
+
     return '''
 import 'package:mosaic/mosaic.dart';
 
-{Context.banner}
+${Context.banner}
 
 $content
 
 mixin HeadNode {
-  ${headProps.join('\n  ')}
+ ${headProps.join('\n  ')}
 }
 ''';
   }
 
   Future<void> _saveFile(String path, Map<String, dynamic> json) async {
-    final file = File(path);
-
+    final file = await utils.ensureExists(path);
     final content = await _generate(json);
     await file.writeAsString(content);
   }

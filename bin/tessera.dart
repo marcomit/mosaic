@@ -238,6 +238,7 @@ final module = ${capitalized}Module();
         })
         .join('\n');
     return '''$deps
+  $name.module.active = $active;
   await moduleManager.register($name.module);
 ''';
   }

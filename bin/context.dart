@@ -118,7 +118,13 @@ ${lines.map((l) => '// $l').join('\n')}
     }
 
     final current = config.get('default');
-    buf.writeln('  await moduleManager.initialize($current.module);');
+    buf.writeln('  await moduleManager.initialize($current.module, [');
+
+    sorted.where((t) => t.active).forEach((t) {
+      buf.writeln('    ${t.name}.module,');
+    });
+
+    buf.writeln('  ]);');
 
     buf.writeln('}');
 

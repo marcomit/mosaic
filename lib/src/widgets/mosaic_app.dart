@@ -65,14 +65,22 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
 
     on<Key>('router/push', _refresh);
     on<Key>('router/pop', _refresh);
-    on<RouteTransitionContext>('router/change/*', changeRoute);
+    on<RouteTransitionContext>('router/change/*', _changeRoute);
 
     for (final module in moduleManager.activeModules.values) {
       modules.add(module.build(context));
     }
   }
 
-  void changeRoute(EventContext<RouteTransitionContext> ctx) {
+  @override
+  void reassemble() async {
+    super.reassemble();
+    for (final module in moduleManager.activeModules.values) {
+      await module.hotReload(module);
+    }
+  }
+
+  void _changeRoute(EventContext<RouteTransitionContext> ctx) {
     if (!context.mounted) return;
     final transition = ctx.data;
 

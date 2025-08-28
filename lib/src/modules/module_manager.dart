@@ -111,9 +111,15 @@ class ModuleManager with Loggable {
   ///
   /// **Throws:**
   /// * [ModuleException] If it detect a circular dependency
-  Future<void> initialize(Module start) async {
+  Future<void> initialize(Module start, Iterable<Module> toInitialize) async {
     _defaultModule = start;
-    final sorted = _sortByDeps(modules.values);
+    final sorted = _sortByDeps(toInitialize);
+
+    for (final module in toInitialize) {
+      if (!modules.containsKey(module.name)) {
+        throw ModuleException('Module ${module.name} is not registered');
+      }
+    }
 
     for (final module in sorted) {
       await module.initialize();
@@ -121,26 +127,37 @@ class ModuleManager with Loggable {
     router.init(start.name);
   }
 
+  /// This is an implementation of topological sort with DFS
+  ///
+  /// At each node:
+  /// * Checks if it is already visiting (circular dependencies).
+  /// * Checks if it is already resolved
+  /// * Navigate each dependencies
+  /// * Resolve it (add the node to the result and remove the node from the visiting)
+  ///
+  /// **Throws:**
+  /// * [ModuleException] If it detect a circular dependency
   List<Module> _sortByDeps(Iterable<Module> modules) {
     final sorted = <Module>[];
     final resolved = <String>{};
+    final visiting = <String>{};
 
-    void visit(Module m, [Set<String> path = const {}]) {
-      if (path.contains(m.name)) {
+    void visit(Module m) {
+      if (visiting.contains(m.name)) {
         throw ModuleException(
           'Circular dependency detected',
-          cause: 'This was the circle ${path.join(' -> ')}',
+          cause: 'This was the circle ${visiting.join(' -> ')}',
         );
       }
+      visiting.add(m.name);
 
       if (resolved.contains(m.name)) return;
 
-      for (final dep in m.dependencies) {
-        visit(dep, {...path, m.name});
-      }
+      m.dependencies.forEach(visit);
 
       sorted.add(m);
       resolved.add(m.name);
+      visiting.remove(m.name);
     }
 
     modules.forEach(visit);
