@@ -16,3 +16,6 @@
 ## 0.2.2
 - Fixed topological sort
 - Fixed sync command
+
+## 0.2.3
+- Router fix
