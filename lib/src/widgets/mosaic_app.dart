@@ -60,7 +60,6 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
   void initState() {
     super.initState();
 
-    debugPrint('Default module ${moduleManager.defaultModule?.name}');
     _currentModule = moduleManager.defaultModule?.name;
     _setIndex();
 
@@ -87,7 +86,6 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
 
     if (transition == null) return;
 
-    debugPrint('cambiato to ${transition.to.name}');
     _currentModule = ctx.params[0];
 
     _triggerListener(transition);
