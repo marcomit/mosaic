@@ -12,3 +12,7 @@
 ## 0.2.1
 - Added support for initialize only actives module
 - Commented topological sort
+
+## 0.2.2
+- Fixed topological sort
+- Fixed sync command

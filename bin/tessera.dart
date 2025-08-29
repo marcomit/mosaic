@@ -84,10 +84,10 @@ class Tessera {
     final map = {for (final t in tesserae) t.name: t};
 
     void dfs(Tessera t) {
+      if (visited.contains(t.name)) return;
       if (visiting.contains(t.name)) {
         throw CliException('Circular dependency detected: $visiting');
       }
-      if (visited.contains(t.name)) return;
       visiting.add(t.name);
 
       for (final dep in t.dependencies) {
@@ -238,7 +238,6 @@ final module = ${capitalized}Module();
         })
         .join('\n');
     return '''$deps
-  $name.module.active = $active;
   await moduleManager.register($name.module);
 ''';
   }

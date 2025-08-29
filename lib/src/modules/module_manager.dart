@@ -143,6 +143,8 @@ class ModuleManager with Loggable {
     final visiting = <String>{};
 
     void visit(Module m) {
+      if (resolved.contains(m.name)) return;
+
       if (visiting.contains(m.name)) {
         throw ModuleException(
           'Circular dependency detected',
@@ -150,8 +152,6 @@ class ModuleManager with Loggable {
         );
       }
       visiting.add(m.name);
-
-      if (resolved.contains(m.name)) return;
 
       m.dependencies.forEach(visit);
 

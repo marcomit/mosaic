@@ -29,8 +29,6 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-import 'dart:io';
-
 import 'package:argv/argv.dart';
 import '../utils/gesso.dart';
 import '../context.dart';
