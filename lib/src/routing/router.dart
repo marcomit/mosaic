@@ -152,6 +152,7 @@ class InternalRouter with Loggable {
 
     final ctx = RouteTransitionContext(from: from, to: to, params: params);
 
+    moduleManager.currentModule = _history.last.module;
     events.emit<RouteTransitionContext>(
       ['router', 'change', module].join(Events.sep),
       ctx,

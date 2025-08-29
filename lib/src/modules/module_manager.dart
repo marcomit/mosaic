@@ -31,6 +31,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:mosaic/mosaic.dart';
 
 /// Manages all modules in the application and provides centralized control
@@ -49,7 +50,14 @@ class ModuleManager with Loggable {
   Module? _defaultModule;
 
   /// Name of the currently active module.
-  String? currentModule;
+  String? _currentModule;
+
+  String? get currentModule => _currentModule;
+
+  set currentModule(String? module) {
+    debugPrint('Nuovo modulo corrente $module');
+    _currentModule = module;
+  }
 
   /// All registered modules (read-only view).
   final Map<String, Module> _modules = {};
@@ -74,7 +82,9 @@ class ModuleManager with Loggable {
         'Current module does not set! Consider setting it before!',
       );
     }
-    if (_modules.containsKey(currentModule)) {
+    print(_modules);
+    print(currentModule);
+    if (!_modules.containsKey(currentModule)) {
       throw RouterException('Current module does not exists');
     }
     return _modules[currentModule]!;
@@ -122,7 +132,7 @@ class ModuleManager with Loggable {
     }
 
     for (final module in sorted) {
-      await module.initialize();
+      await activateModule(module);
     }
     router.init(start.name);
   }

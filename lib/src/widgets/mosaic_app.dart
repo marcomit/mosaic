@@ -60,11 +60,12 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
   void initState() {
     super.initState();
 
+    debugPrint('Default module ${moduleManager.defaultModule?.name}');
     _currentModule = moduleManager.defaultModule?.name;
     _setIndex();
 
-    on<Key>('router/push', _refresh);
-    on<Key>('router/pop', _refresh);
+    on<String>('router/push', _refresh);
+    on<String>('router/pop', _refresh);
     on<RouteTransitionContext>('router/change/*', _changeRoute);
 
     for (final module in moduleManager.activeModules.values) {
@@ -72,13 +73,13 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
     }
   }
 
-  @override
-  void reassemble() async {
-    super.reassemble();
-    for (final module in moduleManager.activeModules.values) {
-      await module.hotReload(module);
-    }
-  }
+  // @override
+  // void reassemble() async {
+  //   super.reassemble();
+  //   for (final module in moduleManager.activeModules.values) {
+  //     await module.hotReload(module);
+  //   }
+  // }
 
   void _changeRoute(EventContext<RouteTransitionContext> ctx) {
     if (!context.mounted) return;
@@ -86,6 +87,7 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
 
     if (transition == null) return;
 
+    debugPrint('cambiato to ${transition.to.name}');
     _currentModule = ctx.params[0];
 
     _triggerListener(transition);
