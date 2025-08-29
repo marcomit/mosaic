@@ -19,3 +19,6 @@
 
 ## 0.2.3
 - Router fix
+
+## 0.2.4
+- Router pop generic type

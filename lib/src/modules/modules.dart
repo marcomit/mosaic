@@ -447,7 +447,7 @@ abstract class Module with Loggable {
     if (_stack.isEmpty) return;
     final c = _stack.removeLast().completer;
     logger.info('$name POP ${_stack.length}', ['router']);
-    events.emit<int>(['router', 'pop'].join(Events.sep), 1);
+    events.emit<String>(['router', 'pop'].join(Events.sep), '');
     c.complete(value);
   }
 
@@ -458,7 +458,7 @@ abstract class Module with Loggable {
   void clear() {
     while (_stack.isNotEmpty) {
       _stack.removeLast().completer.complete(null);
-      events.emit(['router', 'pop'].join(Events.sep), 1);
+      events.emit<String>(['router', 'pop'].join(Events.sep), '');
     }
   }
   // Lifecycle hooks - override these in subclasses

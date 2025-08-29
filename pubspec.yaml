@@ -1,6 +1,6 @@
 name: mosaic
 description: "Mosaic is a modular architecture for Flutter that enables clean separation of features using dynamic modules, internal events, UI injection, and centralized builds "
-version: 0.2.3
+version: 0.2.4
 homepage: "https://github.com/marcomit/mosaic"
 repository: "https://github.com/marcomit/mosaic"
 

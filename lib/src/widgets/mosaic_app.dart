@@ -73,13 +73,13 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
     }
   }
 
-  // @override
-  // void reassemble() async {
-  //   super.reassemble();
-  //   for (final module in moduleManager.activeModules.values) {
-  //     await module.hotReload(module);
-  //   }
-  // }
+  @override
+  void reassemble() async {
+    super.reassemble();
+    for (final module in moduleManager.activeModules.values) {
+      await module.hotReload(module);
+    }
+  }
 
   void _changeRoute(EventContext<RouteTransitionContext> ctx) {
     if (!context.mounted) return;
