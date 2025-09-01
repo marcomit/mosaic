@@ -29,44 +29,55 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-class AsyncState<T, V> {
-  AsyncState(this.builder);
-  final Future<T> Function() builder;
-  V Function()? _loading;
-  V Function(Object?)? _error;
-  V Function(T)? _success;
+import 'package:flutter/widgets.dart';
+import 'package:mosaic/mosaic.dart';
 
-  Future<T?> fetch() async {
-    try {
-      if (_loading != null) _loading!();
-      final res = await builder();
-      if (_success != null) _success!(res);
-      return res;
-    } catch (err) {
-      if (_error != null) _error!(err);
-    }
-    return null;
-  }
+/// Watches a [Signal] and rebuilds when its value changes.
+///
+/// This widget automatically subscribes to signal changes and rebuilds
+/// the UI when the signal's state is updated.
+///
+/// *Example:*
+/// ```dart
+/// Watch<int>(
+///   signal: counter,
+///   builder: (context, value) => Text('Count: $value'),
+/// )
+/// ```
+///
+/// *Note:* Use this widget to rebuild only the necessary widgets,
+/// avoiding update expensive widgets.
+class Watch<T> extends StatelessWidget {
+  const Watch({super.key, required this.signal, required this.child});
+  final Signal<T> signal;
+  final Widget child;
 
-  AsyncState<T, V> loading(V Function() load) {
-    _loading = load;
-    return this;
-  }
-
-  AsyncState<T, V> success(V Function(T) completed) {
-    _success = completed;
-    return this;
-  }
-
-  AsyncState<T, V> error(V Function(Object?) err) {
-    _error = err;
-    return this;
+  @override
+  Widget build(BuildContext context) {
+    return MultipleWatch(signals: [signal], builder: (ctx) => child);
   }
 }
 
-void pr() {
-  AsyncState(() => Future.value(1))
-      .loading(() => 'loading...')
-      .error((err) => 'Errore')
-      .success((d) => 'Data ricevuti');
+class MultipleWatch extends StatefulWidget {
+  const MultipleWatch({
+    super.key,
+    required this.signals,
+    required this.builder,
+  });
+  final List<Signal> signals;
+  final Function(BuildContext) builder;
+
+  @override
+  State<MultipleWatch> createState() => _MultipleWatchState();
+}
+
+class _MultipleWatchState extends State<MultipleWatch> with StatefulSignal {
+  @override
+  void initState() {
+    super.initState();
+    widget.signals.forEach(watch);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context);
 }

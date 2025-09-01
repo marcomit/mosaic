@@ -55,29 +55,18 @@ mixin StatefulSignal<T extends StatefulWidget> on State<T> {
   }
 
   void _refresh<R>(R param) {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    if (context is! Element) return;
+    (context as Element).markNeedsBuild();
   }
 
-  void watch<R>(Signal<R> provider) {
+  R watch<R>(Signal<R> provider) {
     if (!_listener.containsKey(provider)) {
       _listener[provider] = Object();
     }
     provider.watch(_refresh, _listener[provider]!);
+    return provider.state;
   }
 
   void unwatch<R>(Signal<R> provider) => _listener.remove(provider);
-}
-
-mixin StatelessSignal on StatelessWidget {
-  void watch<T>(Signal<T> signal) {}
-}
-
-class Prova extends StatelessWidget {
-  const Prova({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    createElement().rebuild(force: true);
-    return const Placeholder();
-  }
 }

@@ -38,8 +38,8 @@ import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 ///
 /// Allows checking the expected result of the call [TResult]
 /// and the params you pass to the callback [TParams].
-class _ImpTypedCallback<TResult, TParams> {
-  _ImpTypedCallback(this.callback);
+class _ImcTypedCallback<TResult, TParams> {
+  _ImcTypedCallback(this.callback);
 
   /// callback that handle the call.
   final IMCCallback<TResult, TParams> callback;
@@ -51,105 +51,115 @@ class _ImpTypedCallback<TResult, TParams> {
   final Type params = TParams;
 }
 
-/// Base class that represend the contract.
-///
-/// Allows you to create custom contracts and register they into the IMC
-/// Use [IMCContract] if you want the highest type-safe level from the [IMC].
-///
-/// Example:
-/// ```dart
-/// class UserContract extends IMCContract {
-///   UserContract() : super("user");
-///   User? getUserById(String id) async {...}
-/// }
-///
-/// // inside the module
-/// imc.put(UsrContract());
-///
-/// // And you can call the contract in other modules
-/// final userContract = imc.get<UserContract>();
-/// await userContract.getUserById('user1'); // expected type User?
-/// ```
-///
-/// **Performance Note:**
-/// String-based calls have runtime overhead for path parsing and type validation.
-/// Use contracts for better performance in high-frequency scenarios.
-///
-/// **When to use:**
-/// - Use contracts ([IMC.put]/[IMC.get]) for type safety within your team
-/// - Use string calls ([IMC.register]/[IMC.call]) for loose coupling between modules
-///
-/// Shorthand for [IMC.call] method - allows using IMC instance as a function
-///
-/// Example: `await imc<User, String>('user.getUser', 'id123')`
-abstract class IMCContract {
-  IMCContract(this.moduleName);
-
-  /// Represent the name of the module.
-  final String moduleName;
-}
-
 /// Context of the [IMCCallback].
 ///
 /// It contains the params you pass when you call the imc call.
 /// When you create the call you must define a callback that takes this context.
 class ImcContext<T> {
-  ImcContext(this.params);
+  ImcContext(this.path, this.params);
 
   /// Params of the callback.
   /// Assigned when a call will be executed.
   /// and handled by the callback you've defined before.
   final T params;
+  final String path;
+  final DependencyInjector di = DependencyInjector();
 }
 
 typedef IMCCallback<TResult, TParams> =
     FutureOr<TResult> Function(ImcContext<TParams>);
 
+class ImcNode<TResult, TParams> {
+  ImcNode(this.name);
+  final String name;
+  _ImcTypedCallback<TResult, TParams>? _callback;
+  final Map<String, ImcNode> _children = {};
+
+  ImcNode _on(IMCCallback<TResult, TParams> callback) {
+    _callback = _ImcTypedCallback(callback);
+    return this;
+  }
+
+  ImcNode _sub(String name) {
+    if (_children.containsKey(name)) {
+      throw ImcException('Node $name already registered');
+    }
+    final child = ImcNode(name);
+    _children[name] = child;
+    return child;
+  }
+
+  Future<ImcNode> _executeChild(String name, ImcContext context) async {
+    if (!_children.containsKey(name)) {
+      throw ImcException(
+        'Invalid callback ${context.path}',
+        cause: 'The handler is not registered',
+        fix: ' Try to register the handler before call it',
+      );
+    }
+    final child = _children[name]!;
+
+    return child;
+  }
+
+  Future<void> _exec(String args, TParams params) async {
+    ImcNode current = this;
+    final path = args.split(IMC.sep);
+    final ImcContext context = ImcContext(args, params);
+    for (final segment in path) {
+      current = await current._executeChild(segment, context);
+    }
+  }
+}
+
 /// IMC (Inter-Module Communication)
 /// It permit to call methods through different modules without depending on it
+///
+/// Example:
+/// ```dart
+/// class UserModule exetnds Module {
+///   @override
+///   void onInit() {
+///     imc.register('user.getUserById', (ctx) {
+///       // Put your logic here
+///     });
+///   }
+///   ...
+/// }
+///
+/// // inside another module widget
+/// onPressed: () => imc('user.getUserById', 'myid');
+/// ```
+///
+/// [IMC] also supports:
+/// * Middleware
+/// ```dart
+/// imc.register('user', (ctx) {
+///   // All functions under the 'user' path execute this function before
+///   validateAuthorization(ctx.params);
+/// });
+/// imc.register('user.getUserById', (ctx) {
+///   // This the user is authorized
+/// });
+/// ```
+/// * Dependency Injection
+/// ```dart
+/// imc.register('user', (ctx) { ctx.di.put(UserService(ctx.params)); });
+/// imc.register('user.getUserById', (ctx) async {
+///   final userService = ctx.di.get<UserService>();
+///   // use your service here
+/// });
+/// ```
 class IMC {
-  final DependencyInjector _container = DependencyInjector();
-  final Map<String, Map<String, _ImpTypedCallback>> _calls = {};
+  final ImcNode _root = ImcNode('root');
   bool _disposed = false;
+
+  static const String sep = '.';
 
   void _checkDispose() {
     if (_disposed) {
       throw ImcException('Operation not permitted', cause: 'Object disposed');
     }
-  }
-
-  /// This allows to insert [IMCContract] inside the IMC.
-  ///
-  /// **Parameters:**
-  ///   - [contract] is the instance of the contract that will be registered
-  ///
-  /// **Throws:**
-  ///   - [ImcException] if it was already disposed
-  ///   - [DependencyException] if it contains a [IMCContract] already registered
-  void put<T extends IMCContract>(T contract) {
-    _checkDispose();
-    _container.put<T>(contract);
-  }
-
-  /// Function to retrieve a registered contract
-  ///
-  /// It takes a type argument [T] that is an [IMCContract].
-  /// if there's no contract with the type you passed it throws an [ImcException]
-  ///
-  /// **Example:**
-  /// ```dart
-  /// imc.put(UserContract()); // register the Contract
-  /// imc.get<UserContract>(); // give the registered contract
-  /// ```
-  T get<T extends IMCContract>() {
-    _checkDispose();
-    if (!_container.contains<T>()) {
-      throw ImcException(
-        'Contract $T not found',
-        fix: 'Try to add it using put<$T>(instance)',
-      );
-    }
-    return _container.get<T>();
   }
 
   /// Register a call by string name.
@@ -170,40 +180,22 @@ class IMC {
   /// }); // Now you know that the return type is User?
   /// ```
   void register<TResult, TParams>(
-    String path,
+    String call,
     IMCCallback<TResult, TParams> callback,
   ) {
     _checkDispose();
-    _validateAction(path);
-    final [name, action] = path.split('.');
-    _insertAction<TResult, TParams>(name, action, callback);
-  }
 
-  void _validateAction(String action) {
-    final path = action.split('.');
-    if (path.length != 2) {
-      throw ImcException(
-        '$action is an invalid call',
-        fix: 'Register with moduleName.action',
-      );
+    final path = call.split(sep);
+
+    ImcNode current = _root;
+
+    for (final segment in path) {
+      if (!current._children.containsKey(segment)) {
+        current._sub(segment);
+      }
+      current = current._children[segment]!;
     }
-  }
-
-  void _insertAction<TResult, TParams>(
-    String module,
-    String action,
-    IMCCallback<TResult, TParams> callback,
-  ) {
-    if (!_calls.containsKey(module)) {
-      _calls[module] = {};
-    }
-    if (_calls[module]!.containsKey(action)) {
-      throw ImcException("No action '$action' found in module '$module'");
-    }
-
-    final typed = _ImpTypedCallback(callback);
-
-    _calls[module] = {..._calls[module]!, action: typed};
+    (current as ImcNode<TResult, TParams>)._on(callback);
   }
 
   /// Methods to execute raw call (String based instead of contracts).
@@ -220,36 +212,12 @@ class IMC {
   /// ```
   Future<TResult> call<TResult, TParams>(String action, TParams params) async {
     _checkDispose();
-    _validateAction(action);
-
-    final [name, act] = action.split('.');
-
-    if (!_calls.containsKey(name)) {
-      throw ImcException('Unknown module $name');
-    }
-    if (!_calls[name]!.containsKey(act)) {
-      throw ImcException("There's not actions $act in module $name");
-    }
-    final typed = _calls[name]![act]!;
-    final context = ImcContext(params);
-
-    if (typed.params is! TParams) {
-      throw ImcException('Expected params $TParams, got ${typed.params}');
-    }
-    if (typed.result is! TResult) {
-      throw ImcException('Expected result $TResult, got ${typed.result}');
-    }
-
-    final result = await typed.callback(context);
-    if (result is! TResult) {
-      throw ImcException(
-        'Mismatch return type',
-        cause:
-            'Your expected type is $TResult but the actual type is ${result.runtimeType}',
-      );
-    }
-    return result;
   }
+
+  Future<TResult> execute<TResult, TParams>(
+    String action,
+    TParams params,
+  ) async {}
 
   /// Clear all the actions and contracts registered.
   ///
@@ -257,7 +225,6 @@ class IMC {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
-    _calls.clear();
-    _container.clear();
+    _root._children.clear();
   }
 }

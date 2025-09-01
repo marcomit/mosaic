@@ -32,7 +32,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 import 'package:mosaic/src/routing/router.dart';
-import 'package:mosaic/src/signal/consumer_signal.dart';
+import 'package:mosaic/src/signal/signal_watch.dart';
 import 'package:mosaic/src/signal/signal.dart';
 
 extension RouteExtension on BuildContext {

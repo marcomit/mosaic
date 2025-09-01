@@ -266,4 +266,12 @@ class DependencyInjector {
   ///
   /// Returns `true` if the type was found and removed, `false` otherwise.
   bool _removeIfPresent<T>(Map<Type, Object> map) => map.remove(T) != null;
+
+  /// It is the equivalent to call [get]
+  ///
+  /// Example:
+  /// ```dart
+  /// final userService = di<UserService>(); // same as di.get<UserService>();
+  /// ```
+  T call<T extends Object>() => get<T>();
 }
