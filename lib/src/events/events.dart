@@ -239,7 +239,7 @@ class Events {
   Future<T> wait<T>(String channel) {
     final data = Completer<T>();
 
-    events.once<T>(channel, (ctx) {
+    once<T>(channel, (ctx) {
       if (ctx.data == null) return;
       data.complete(ctx.data);
     });
@@ -313,23 +313,20 @@ class Events {
       if (!listener._verify(path)) continue;
 
       try {
-        if (listener is EventListener<T>) {
-          final context = EventContext<T>(
-            data,
-            channel,
-            listener._getParams(path),
+        final context = EventContext<T>(
+          data,
+          channel,
+          listener._getParams(path),
+        );
+        if (listener is! EventListener<T>) {
+          throw EventException(
+            'Mismatch types',
+            cause: 'Expected EventListener<$T>, found ${listener.runtimeType}',
+            fix: 'Try to match all listeners types',
           );
-          listener.callback(context);
-          notifiedCount++;
-        } else {
-          final context = EventContext<dynamic>(
-            data,
-            channel,
-            listener._getParams(path),
-          );
-          listener.callback(context);
-          notifiedCount++;
         }
+        listener.callback(context);
+        notifiedCount++;
       } catch (e) {
         logger.error('Error in event listener for \'$channel\': $e', [
           'events',

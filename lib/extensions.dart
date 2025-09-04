@@ -48,7 +48,7 @@ extension DependencyExtension on BuildContext {
 }
 
 extension SignalWatchExtension<T> on Signal<T> {
-  Widget when(Widget Function(BuildContext, T) builder) {
-    return Watch(signal: this, builder: builder);
+  Widget when(Widget child) {
+    return Watch(signal: this, child: child);
   }
 }

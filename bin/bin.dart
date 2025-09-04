@@ -61,7 +61,10 @@ ArgvCallback require(String name) {
 
 Argv setupCli() {
   final app = setupContext(Argv('mosaic', 'Modular architecture'))
-    ..command('run', description: 'Run the app')
+    ..command(
+      'run',
+      description: 'Run the app',
+    ).on(check).use<MosaicService>((m) => m.run)
     ..command(
       'walk',
       description: 'Execute the command in all tesserae',

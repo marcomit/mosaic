@@ -45,6 +45,22 @@ class MosaicService {
     print('✓ All tesserae organized successfully'.green);
   }
 
+  Future<void> run(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    final root = await ctx.env.root();
+    final name = ctx.config.get('name');
+    if (name == null) {
+      throw ArgvException('Missing name field inside the mosaic.yaml file');
+    }
+
+    await utils.cmd([
+      'flutter',
+      'run',
+      '-t',
+      utils.join([root!.path, name]),
+    ]);
+  }
+
   Future<void> sync(ArgvResult cli) async {
     final ctx = cli.get<Context>();
     final content = await ctx.getInitializationFile();

@@ -64,6 +64,9 @@ class ImcContext<T> {
   final T params;
   final String path;
   final DependencyInjector di = DependencyInjector();
+  bool _next = false;
+
+  void next() => _next = true;
 }
 
 typedef IMCCallback<TResult, TParams> =
@@ -76,6 +79,9 @@ class ImcNode<TResult, TParams> {
   final Map<String, ImcNode> _children = {};
 
   ImcNode _on(IMCCallback<TResult, TParams> callback) {
+    if (_callback == null) {
+      throw ImcException('Callback already registered');
+    }
     _callback = _ImcTypedCallback(callback);
     return this;
   }
@@ -89,7 +95,7 @@ class ImcNode<TResult, TParams> {
     return child;
   }
 
-  Future<ImcNode> _executeChild(String name, ImcContext context) async {
+  Future<(ImcNode, T)> _executeChild<T>(String name, ImcContext context) async {
     if (!_children.containsKey(name)) {
       throw ImcException(
         'Invalid callback ${context.path}',
@@ -99,16 +105,34 @@ class ImcNode<TResult, TParams> {
     }
     final child = _children[name]!;
 
-    return child;
+    T? result;
+    if (child._callback != null) {
+      if (child._callback!.params.runtimeType != context.params) {
+        throw ImcException('Mismatch params types');
+      }
+      result = await child._callback!.callback(context);
+      if (result.runtimeType != child._callback!.result) {
+        throw ImcException('Mismatch return types');
+      }
+    }
+    if (result == null) {
+      throw ImcException('Cannot use null value');
+    }
+
+    return (child, result);
   }
 
-  Future<void> _exec(String args, TParams params) async {
-    ImcNode current = this;
+  Future<TResult> _exec(String args, TParams params) async {
     final path = args.split(IMC.sep);
-    final ImcContext context = ImcContext(args, params);
+    final ctx = ImcContext(args, params);
+    dynamic result;
+
+    ImcNode current = this;
     for (final segment in path) {
-      current = await current._executeChild(segment, context);
+      (current, result) = await current._executeChild(segment, ctx);
     }
+
+    return result as TResult;
   }
 }
 
@@ -195,7 +219,7 @@ class IMC {
       }
       current = current._children[segment]!;
     }
-    (current as ImcNode<TResult, TParams>)._on(callback);
+    (current)._on(callback as IMCCallback);
   }
 
   /// Methods to execute raw call (String based instead of contracts).
@@ -210,14 +234,17 @@ class IMC {
   /// final user = await imc('user.getUserById', 'user1'); // this is not typed and should be throws into an error
   /// final user = await imc<User?, String>('user.getUserById', 'user1'); // this is fully typed.
   /// ```
-  Future<TResult> call<TResult, TParams>(String action, TParams params) async {
-    _checkDispose();
+  Future<TResult> call<TResult, TParams>(String action, TParams params) {
+    return execute(action, params);
   }
 
   Future<TResult> execute<TResult, TParams>(
     String action,
     TParams params,
-  ) async {}
+  ) async {
+    final ctx = ImcContext(action, params);
+    return await _root._exec(action, ctx);
+  }
 
   /// Clear all the actions and contracts registered.
   ///
