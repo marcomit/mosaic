@@ -35,6 +35,7 @@ import 'context.dart';
 import 'services/mosaic.dart';
 import 'services/tessera.dart';
 import 'services/events.dart';
+import 'services/dependency_resolver.dart';
 import 'config.dart';
 import 'enviroment.dart';
 import 'exception.dart';
@@ -46,8 +47,14 @@ Argv setupContext(Argv app) {
   final mosaic = MosaicService();
   final event = EventService();
   final tessera = TesseraService();
+  final dependencyResolver = DependencyResolver();
 
-  return app.set(ctx).set(mosaic).set(tessera).set(event);
+  return app
+      .set(ctx)
+      .set(mosaic)
+      .set(tessera)
+      .set(event)
+      .set(dependencyResolver);
 }
 
 void check(ArgvResult cli) => cli.get<Context>().checkEnvironment();
@@ -92,7 +99,7 @@ Argv setupCli() {
     ..command(
       'tidy',
       description: 'Add to the root project all existing tesserae',
-    ).on(check).use<MosaicService>((m) => m.tidy)
+    ).on(check).use<DependencyResolver>((d) => d.tidy)
     ..command(
       'sync',
       description: 'Sync all tesserae and generate the initialization file',

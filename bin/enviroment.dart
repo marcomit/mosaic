@@ -45,7 +45,11 @@ class Environment {
     Future<bool> Function(Directory) visitor, [
     String? path,
   ]) async {
-    await utils.walk<bool>((acc, c) async => !await visitor(c), path: path);
+    await utils.walk<bool>((acc, c) async {
+      final visited = await visitor(c);
+      if (!visited) return null;
+      return visited;
+    }, path: path);
   }
 
   Future<void> walkCmd(List<String> cmd, [String? path]) async {
@@ -91,22 +95,7 @@ class Environment {
   }
 
   Future<bool> _command(List<String> cmd, Directory curr) async {
-    final process = await Process.start(
-      cmd[0],
-      cmd.sublist(1),
-      workingDirectory: curr.path,
-      runInShell: true,
-    );
-
-    process.stdout
-        .transform(const SystemEncoding().decoder)
-        .listen(stdout.write);
-    process.stderr
-        .transform(const SystemEncoding().decoder)
-        .listen(stderr.write);
-
-    await process.exitCode;
-
+    await utils.cmd(cmd, path: curr.path);
     return isValidPackage(path: curr.path);
   }
 }
