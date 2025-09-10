@@ -74,8 +74,6 @@ class DependencyResolver {
         print('├─ '.dim + entry.key + ' → '.dim + entry.value);
       }
 
-      await Future.delayed(const Duration(milliseconds: 500));
-
       await generateOverridedPackages(cli, dir);
       print('└─ '.dim + '✓'.brightGreen + ' Generated overrides'.brightGreen);
     } catch (e) {
@@ -128,5 +126,7 @@ class DependencyResolver {
     );
 
     await ctx.config.write(file.path, {'dependency_overrides': toOverride});
+
+    await utils.cmd(['flutter', 'pub', 'get'], path: path.path);
   }
 }
