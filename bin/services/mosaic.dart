@@ -31,6 +31,7 @@
 import 'dart:io';
 
 import 'package:argv/argv.dart';
+import 'package:path/path.dart' as p;
 
 import '../context.dart';
 import '../utils/gesso.dart';
@@ -153,7 +154,7 @@ class MosaicService {
   Future<void> list(ArgvResult cli) async {
     final ctx = cli.get<Context>();
     final root = cli.positional('path');
-    final showPath = cli.flag('path');
+    final showPath = cli.option('path');
 
     print('');
 
@@ -182,11 +183,15 @@ class MosaicService {
             ? ' [${tessera.dependencies.join(', ')}]'.dim
             : '';
 
-        final blocks = [
-          '  $prefix $name'.padRight(30),
-          ' ($status)$deps'.dim,
-          if (showPath) ' ${tessera.path} ',
-        ];
+        final blocks = ['  $prefix $name'.padRight(30), ' ($status)$deps'.dim];
+        if (showPath != null) {
+          if (showPath == 'rel') {
+            blocks.add(' ${p.relative(tessera.path)} ');
+          } else {
+            blocks.add(' ${tessera.path}');
+          }
+        }
+
         print(blocks.join(''));
       }
 

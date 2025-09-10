@@ -351,16 +351,14 @@ void main() {
 
 // Test helper classes
 class TestUser {
+  TestUser(this.name, this.age);
   final String name;
   final int age;
-
-  TestUser(this.name, this.age);
 }
 
 class TestService {
-  final String data;
-
   TestService(this.data);
+  final String data;
 
   String getData() => 'Service data: $data';
 }

@@ -33,6 +33,7 @@ import 'dart:io';
 import 'package:argv/argv.dart';
 import 'package:path/path.dart' as p;
 
+import '../utils/gesso.dart';
 import '../enviroment.dart';
 import '../utils/utils.dart';
 import '../context.dart';
@@ -40,15 +41,48 @@ import '../context.dart';
 class DependencyResolver {
   Future<void> tidy(ArgvResult cli) async {
     final ctx = cli.get<Context>();
+
     await ctx.env.walk((dir) async {
-      print('walking into ${dir.path}');
-      if (ctx.env.isValidPackage(path: dir.path)) {
-        await generateOverridedPackages(cli, dir);
-        print('Generated ${utils.last(dir.path)}');
-        return false;
-      }
-      return true;
+      if (!ctx.env.isValidPackage(path: dir.path)) return true;
+
+      final packageName = utils.last(dir.path);
+
+      await _processPackage(cli, dir, packageName);
+      return false;
     });
+  }
+
+  Future<void> _processPackage(
+    ArgvResult cli,
+    Directory dir,
+    String name,
+  ) async {
+    final ctx = cli.get<Context>();
+
+    print(name.cyan.bold);
+
+    try {
+      final packages = await getLocalPackages(ctx, dir);
+
+      if (packages.isEmpty) {
+        print('└─ '.dim + '○'.brightBlack + ' No local dependencies'.dim);
+        print('');
+        return;
+      }
+
+      for (final entry in packages.entries) {
+        print('├─ '.dim + entry.key + ' → '.dim + entry.value);
+      }
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      await generateOverridedPackages(cli, dir);
+      print('└─ '.dim + '✓'.brightGreen + ' Generated overrides'.brightGreen);
+    } catch (e) {
+      print('└─ '.dim + '✗'.brightRed + ' Failed: '.red + e.toString().dim);
+      rethrow;
+    }
+    print('');
   }
 
   Future<Map<String, String>> getLocalPackages(
@@ -62,9 +96,8 @@ class DependencyResolver {
     final pubspec = await ctx.config.read(
       utils.join([path.path, Environment.packageMark]),
     );
-    print('pubspec reded $pubspec');
 
-    if (pubspec.containsKey('dependencies')) return res;
+    if (!pubspec.containsKey('dependencies')) return res;
 
     final dependencies = pubspec['dependencies'] as Map<String, dynamic>;
     for (final MapEntry(:key, :value) in dependencies.entries) {
@@ -85,6 +118,7 @@ class DependencyResolver {
     final packages = await getLocalPackages(ctx, path);
 
     final toOverride = <String, dynamic>{};
+
     for (final MapEntry(:key, :value) in packages.entries) {
       toOverride[key] = p.relative(value, from: path.path);
     }
@@ -93,6 +127,6 @@ class DependencyResolver {
       utils.join([path.path, 'pubspec_overrides.yaml']),
     );
 
-    ctx.config.write(file.path, {'dependency_overrides': toOverride});
+    await ctx.config.write(file.path, {'dependency_overrides': toOverride});
   }
 }
