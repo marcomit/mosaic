@@ -79,7 +79,7 @@ Argv setupCli() {
     ..command('status').on(check).use<MosaicService>((m) => m.status)
     ..command('list', description: 'Discover all tesserae in the project')
         .positional('path')
-        .flag('path', abbr: 'p')
+        .option('path', abbr: 'p', defaultValue: 'abs', allowed: ['abs', 'rel'])
         .flag('deps', abbr: 'd')
         .on(check)
         .use<MosaicService>((MosaicService m) => m.list)
