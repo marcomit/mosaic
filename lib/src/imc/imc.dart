@@ -64,9 +64,9 @@ class ImcContext<T> {
   final T params;
   final String path;
   final DependencyInjector di = DependencyInjector();
-  bool _next = false;
+  // bool _next = false;
 
-  void next() => _next = true;
+  // void next() => _next = true;
 }
 
 typedef IMCCallback<TResult, TParams> =
