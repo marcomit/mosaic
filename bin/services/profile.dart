@@ -133,7 +133,5 @@ class ProfileService {
     return value;
   }
 
-  Future<Map<dynamic, dynamic>> _getProfile() async {}
-
   Future<void> exec(ArgvResult cli) async {}
 }

@@ -31,7 +31,7 @@
 
 import 'config.dart';
 import 'enviroment.dart';
-import 'tessera.dart';
+import 'models/tessera.dart';
 import 'exception.dart';
 import 'utils/gesso.dart';
 import 'utils/utils.dart';

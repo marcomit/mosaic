@@ -29,10 +29,82 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+import '../utils/gesso.dart';
+import '../exception.dart';
+
 class Profile {
-  Profile(this.defaultTessera, this.tesserae);
+  Profile({
+    required this.name,
+    required this.defaultTessera,
+    this.tesserae = const [],
+    this.commands = const {},
+  });
+
+  final String name;
   String defaultTessera;
   final List<String> tesserae;
+  final Map<String, List<String>> commands;
 
-  static Profile parse(dynamic value) {}
+  static Profile parse(MapEntry entry) {
+    final MapEntry(:key, :value) = entry;
+
+    if (value is! Map) {
+      throw CliException('$key is not a valid profile');
+    }
+
+    final requiredFields = {
+      'default': String,
+      'tesserae': List<String>,
+      'commands': Map<String, String>,
+    };
+
+    for (final field in requiredFields.entries) {
+      if (!value.containsKey(field.key)) {
+        throw CliException(
+          'Missing \'${field.key}\' field inside $key profile',
+        );
+      }
+      if (value[field.key].runtimeType != field.value) {
+        throw CliException(
+          'Profile: $key field \'name\' must be a string, found ${value['default']}',
+        );
+      }
+    }
+
+    return Profile(
+      name: entry.key.toString(),
+      defaultTessera: value['default'],
+      tesserae: value['tesserae'],
+      commands: value['commands'],
+    );
+  }
+
+  String buffer(bool isDefault) {
+    final buf = StringBuffer();
+    String prefix = '○'.brightBlack;
+    String name = this.name.white;
+
+    if (isDefault) {
+      prefix = '●'.brightGreen;
+      name = this.name.bold.brightGreen;
+    }
+
+    buf.writeln('  $prefix $name'.padRight(20) + '($defaultTessera)'.dim);
+    buf.writeln(
+      '    ├─ ${tesserae.length} tesserae: '.dim +
+          tesserae.take(3).join(', ').cyan +
+          (tesserae.length > 3 ? '...' : ''),
+    );
+
+    if (commands.isNotEmpty) {
+      buf.writeln(
+        '    └─ ${commands.length} commands: '.dim +
+            commands.keys.take(2).join(', ').yellow +
+            (commands.length > 2 ? '...' : ''),
+      );
+    }
+    buf.writeln();
+
+    return buf.toString();
+  }
 }
