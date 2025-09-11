@@ -36,6 +36,7 @@ import 'services/mosaic.dart';
 import 'services/tessera.dart';
 import 'services/events.dart';
 import 'services/dependency_resolver.dart';
+import 'services/profile.dart';
 import 'config.dart';
 import 'enviroment.dart';
 import 'exception.dart';
@@ -48,13 +49,15 @@ Argv setupContext(Argv app) {
   final event = EventService();
   final tessera = TesseraService();
   final dependencyResolver = DependencyResolver();
+  final profile = ProfileService();
 
   return app
       .set(ctx)
       .set(mosaic)
       .set(tessera)
       .set(event)
-      .set(dependencyResolver);
+      .set(dependencyResolver)
+      .set(profile);
 }
 
 void check(ArgvResult cli) => cli.get<Context>().checkEnvironment();
@@ -64,6 +67,15 @@ ArgvCallback require(String name) {
     if (res.positional(name) != null) return;
     throw CliException('Missing positional argument $name');
   };
+}
+
+Argv setupProfilesCommand(Argv app) {
+  final profile = app.command('profile').on(check);
+
+  profile.command('set').positional('name').use<ProfileService>((p) => p.set);
+  profile.command('list').use<ProfileService>((p) => p.list);
+
+  return profile;
 }
 
 Argv setupCli() {
@@ -143,6 +155,7 @@ Argv setupCli() {
   depsadd.use<TesseraService>((t) => t.depsAdd);
   depsrem.use<TesseraService>((t) => t.depsRemove);
 
+  setupProfilesCommand(app);
   return app;
 }
 

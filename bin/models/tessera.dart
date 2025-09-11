@@ -31,10 +31,10 @@
 
 import 'dart:io';
 
-import 'context.dart';
-import 'enviroment.dart';
-import 'utils/utils.dart';
-import 'exception.dart';
+import '../context.dart';
+import '../enviroment.dart';
+import '../utils/utils.dart';
+import '../exception.dart';
 
 class Tessera {
   Tessera(

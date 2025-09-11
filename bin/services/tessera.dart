@@ -36,7 +36,7 @@ import '../context.dart';
 import '../utils/utils.dart';
 import '../utils/gesso.dart';
 import '../exception.dart';
-import '../tessera.dart';
+import '../models/tessera.dart';
 
 class TesseraService {
   Future<void> add(ArgvResult cli) async {
