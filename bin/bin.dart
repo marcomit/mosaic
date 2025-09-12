@@ -119,14 +119,14 @@ void setupProjectCommand(Argv app) {
 
 Argv setupCli() {
   final app = setupContext(Argv('mosaic', 'Modular architecture'))
-    ..command(
-      'run',
-      description: 'Run the app',
-    ).on(check).use<MosaicService>((m) => m.run)
-    ..command(
-      'walk',
-      description: 'Execute the command in all tesserae',
-    ).positional('command').on(check).use<MosaicService>((m) => m.walk)
+    // ..command(
+    //   'run',
+    //   description: 'Run the app',
+    // ).on(check).use<MosaicService>((m) => m.run)
+    // ..command(
+    //   'walk',
+    //   description: 'Execute the command in all tesserae',
+    // ).positional('command').on(check).use<MosaicService>((m) => m.walk)
     ..command('status').on(check).use<MosaicService>((m) => m.status)
     ..command('list', description: 'Discover all tesserae in the project')
         .positional('path')

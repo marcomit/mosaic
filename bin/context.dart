@@ -29,6 +29,8 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+import 'dart:io';
+
 import 'config.dart';
 import 'enviroment.dart';
 import 'models/tessera.dart';

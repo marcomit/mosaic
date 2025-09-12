@@ -35,6 +35,7 @@ import 'package:path/path.dart' as p;
 
 import '../utils/gesso.dart';
 import '../enviroment.dart';
+import '../exception.dart';
 import '../utils/utils.dart';
 import '../context.dart';
 
@@ -42,12 +43,13 @@ class DependencyResolver {
   Future<void> tidy(ArgvResult cli) async {
     final ctx = cli.get<Context>();
 
+    final root = await ctx.env.root();
+    final localPackages = await ctx.env.getAllPackages(root!.path);
+
     await ctx.env.walk((dir) async {
       if (!ctx.env.isValidPackage(path: dir.path)) return true;
 
-      final packageName = utils.last(dir.path);
-
-      await _processPackage(cli, dir, packageName);
+      await _processPackage(cli, dir, localPackages);
       return false;
     });
   }
@@ -55,14 +57,16 @@ class DependencyResolver {
   Future<void> _processPackage(
     ArgvResult cli,
     Directory dir,
-    String name,
+    Map<String, String> localPackages,
   ) async {
     final ctx = cli.get<Context>();
 
+    final name = utils.last(dir.path);
     print(name.cyan.bold);
 
     try {
-      final packages = await getLocalPackages(ctx, dir);
+      final packages = await getLocalPackages(ctx, dir, localPackages);
+      print(localPackages);
 
       if (packages.isEmpty) {
         print('└─ '.dim + '○'.brightBlack + ' No local dependencies'.dim);
@@ -78,7 +82,7 @@ class DependencyResolver {
       print('└─ '.dim + '✓'.brightGreen + ' Generated overrides'.brightGreen);
     } catch (e) {
       print('└─ '.dim + '✗'.brightRed + ' Failed: '.red + e.toString().dim);
-      rethrow;
+      // rethrow;
     }
     print('');
   }
@@ -86,6 +90,7 @@ class DependencyResolver {
   Future<Map<String, String>> getLocalPackages(
     Context ctx,
     Directory path,
+    Map<String, String> localPackages,
   ) async {
     if (!ctx.env.isValidPackage(path: path.path)) return {};
 
@@ -98,10 +103,9 @@ class DependencyResolver {
     if (!pubspec.containsKey('dependencies')) return res;
 
     final dependencies = pubspec['dependencies'] as Map<String, dynamic>;
-    for (final MapEntry(:key, :value) in dependencies.entries) {
-      if (value is! Map) continue;
-      if (!value.containsKey('path')) continue;
-      res[key] = value['path'];
+    for (final MapEntry(:key) in dependencies.entries) {
+      if (!localPackages.containsKey(key)) continue;
+      res[key] = localPackages[key]!;
     }
 
     return res;
@@ -113,12 +117,19 @@ class DependencyResolver {
 
     if (root == null) return;
 
-    final packages = await getLocalPackages(ctx, path);
+    final localPackages = await ctx.env.getAllPackages();
+    final packages = await getLocalPackages(ctx, path, localPackages);
 
     final toOverride = <String, dynamic>{};
 
     for (final MapEntry(:key, :value) in packages.entries) {
-      toOverride[key] = p.relative(value, from: path.path);
+      final source = utils.join([root.path, value]);
+      final newPath = {'path': p.relative(source, from: path.path)};
+      print('SRC: $source');
+      print('OLD: ${path.path}');
+      print('NEW: ${newPath['path']}');
+      print('');
+      toOverride[key] = newPath;
     }
 
     final file = await utils.ensureExists(
@@ -127,6 +138,9 @@ class DependencyResolver {
 
     await ctx.config.write(file.path, {'dependency_overrides': toOverride});
 
-    await utils.cmd(['flutter', 'pub', 'get'], path: path.path);
+    final code = await utils.cmd(['flutter', 'pub', 'get'], path: path.path);
+    if (code != 0) {
+      throw CliException('Failed to get ${path.path}');
+    }
   }
 }
