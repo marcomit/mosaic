@@ -80,7 +80,7 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
     }
   }
 
-  void _changeRoute(EventContext<RouteTransitionContext> ctx) {
+  void _changeRoute<T>(EventContext<RouteTransitionContext<T>> ctx) {
     if (!context.mounted) return;
     final transition = ctx.data;
 

@@ -22,3 +22,7 @@
 
 ## 0.2.4
 - Router pop generic type
+
+## 0.2.5
+- tidy command generates pubspec_overrides
+

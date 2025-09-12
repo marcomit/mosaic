@@ -36,6 +36,7 @@ import 'services/mosaic.dart';
 import 'services/tessera.dart';
 import 'services/events.dart';
 import 'services/dependency_resolver.dart';
+import 'services/profile.dart';
 import 'config.dart';
 import 'enviroment.dart';
 import 'exception.dart';
@@ -48,13 +49,15 @@ Argv setupContext(Argv app) {
   final event = EventService();
   final tessera = TesseraService();
   final dependencyResolver = DependencyResolver();
+  final profile = ProfileService();
 
   return app
       .set(ctx)
       .set(mosaic)
       .set(tessera)
       .set(event)
-      .set(dependencyResolver);
+      .set(dependencyResolver)
+      .set(profile);
 }
 
 void check(ArgvResult cli) => cli.get<Context>().checkEnvironment();
@@ -66,61 +69,15 @@ ArgvCallback require(String name) {
   };
 }
 
-Argv setupCli() {
-  final app = setupContext(Argv('mosaic', 'Modular architecture'))
-    ..command(
-      'run',
-      description: 'Run the app',
-    ).on(check).use<MosaicService>((m) => m.run)
-    ..command(
-      'walk',
-      description: 'Execute the command in all tesserae',
-    ).positional('command').on(check).use<MosaicService>((m) => m.walk)
-    ..command('status').on(check).use<MosaicService>((m) => m.status)
-    ..command('list', description: 'Discover all tesserae in the project')
-        .positional('path')
-        .option('path', abbr: 'p', defaultValue: 'abs', allowed: ['abs', 'rel'])
-        .flag('deps', abbr: 'd')
-        .on(check)
-        .use<MosaicService>((MosaicService m) => m.list)
-    ..command(
-      'create',
-      description: 'Create a new mosaic project',
-    ).positional('name').use<MosaicService>((m) => m.create)
-    ..command(
-      'add',
-      description: 'Add a tessera',
-    ).positional('name').on(check).use<TesseraService>((t) => t.add)
-    ..command('delete', description: 'Delete a tessera')
-        .positional('name')
-        .flag('force', abbr: 'f', defaultTo: false)
-        .on(check)
-        .use<MosaicService>((m) => m.delete)
-    ..command(
-      'tidy',
-      description: 'Add to the root project all existing tesserae',
-    ).on(check).use<DependencyResolver>((d) => d.tidy)
-    ..command(
-      'sync',
-      description: 'Sync all tesserae and generate the initialization file',
-    ).on(check).use<MosaicService>((m) => m.sync)
-    ..command(
-      'enable',
-      description: 'Enable a tessera',
-    ).positional('name').on(check).use<TesseraService>((t) => t.enable)
-    ..command(
-      'disable',
-      description: 'Disable a tessera',
-    ).positional('name').on(check).use<TesseraService>((t) => t.disable)
-    ..command(
-      'default',
-      description: 'Set the default tessera',
-    ).positional('name').on(check).use<MosaicService>((m) => m.setDefault)
-    ..command(
-      'events',
-      description: 'Build the events based on the configuration file',
-    ).on(check).use<EventService>((e) => e.generate);
+void setupProfilesCommand(Argv app) {
+  final profile = app.command('profile').on(check);
 
+  profile.command('set').positional('name').use<ProfileService>((p) => p.set);
+  profile.command('list').use<ProfileService>((p) => p.list);
+  profile.command('show').positional('name').use<ProfileService>((p) => p.show);
+}
+
+void setupTesseraCommands(Argv app) {
   final deps = app.command('deps');
   final depsadd = deps.command(
     'add',
@@ -142,6 +99,65 @@ Argv setupCli() {
 
   depsadd.use<TesseraService>((t) => t.depsAdd);
   depsrem.use<TesseraService>((t) => t.depsRemove);
+}
+
+void setupProjectCommand(Argv app) {
+  app
+    ..command(
+      'tidy',
+      description: 'Add to the root project all existing tesserae',
+    ).on(check).use<DependencyResolver>((d) => d.tidy)
+    ..command(
+      'sync',
+      description: 'Sync all tesserae and generate the initialization file',
+    ).on(check).use<MosaicService>((m) => m.sync)
+    ..command(
+      'events',
+      description: 'Build the events based on the configuration file',
+    ).on(check).use<EventService>((e) => e.generate);
+}
+
+Argv setupCli() {
+  final app = setupContext(Argv('mosaic', 'Modular architecture'))
+    // ..command(
+    //   'run',
+    //   description: 'Run the app',
+    // ).on(check).use<MosaicService>((m) => m.run)
+    // ..command(
+    //   'walk',
+    //   description: 'Execute the command in all tesserae',
+    // ).positional('command').on(check).use<MosaicService>((m) => m.walk)
+    ..command('status').on(check).use<MosaicService>((m) => m.status)
+    ..command('list', description: 'Discover all tesserae in the project')
+        .positional('path')
+        .option('path', abbr: 'p', defaultValue: 'abs', allowed: ['abs', 'rel'])
+        .flag('deps', abbr: 'd')
+        .on(check)
+        .use<MosaicService>((MosaicService m) => m.list)
+    ..command(
+      'create',
+      description: 'Create a new mosaic project',
+    ).positional('name').use<MosaicService>((m) => m.create)
+    ..command(
+      'add',
+      description: 'Add a tessera',
+    ).positional('name').on(check).use<TesseraService>((t) => t.add)
+    ..command(
+      'enable',
+      description: 'Enable a tessera',
+    ).positional('name').on(check).use<TesseraService>((t) => t.enable)
+    ..command(
+      'disable',
+      description: 'Disable a tessera',
+    ).positional('name').on(check).use<TesseraService>((t) => t.disable)
+    ..command(
+      'default',
+      description: 'Set the default tessera',
+    ).positional('name').on(check).use<MosaicService>((m) => m.setDefault);
+
+  setupProfilesCommand(app);
+  setupTesseraCommands(app);
+  setupProjectCommand(app);
 
   return app;
 }

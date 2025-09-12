@@ -98,4 +98,16 @@ class Environment {
     await utils.cmd(cmd, path: curr.path);
     return isValidPackage(path: curr.path);
   }
+
+  Future<Map<String, String>> getAllPackages([String? path]) async {
+    final packages = <String, String>{};
+    await walk((dir) async {
+      if (!isValidPackage(path: dir.path, target: packageMark)) return true;
+
+      packages[utils.last(dir.path)] = dir.path;
+
+      return false;
+    }, path);
+    return packages;
+  }
 }

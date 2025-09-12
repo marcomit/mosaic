@@ -34,7 +34,7 @@ import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 import 'enviroment.dart';
-import 'tessera.dart';
+import 'models/tessera.dart';
 import 'utils/yaml_encoding.dart';
 import 'utils/utils.dart';
 
