@@ -33,6 +33,7 @@ import 'package:argv/argv.dart';
 import '../context.dart';
 import '../exception.dart';
 import '../utils/gesso.dart';
+import '../models/profile.dart';
 
 class ProfileService {
   Future<void> set(ArgvResult cli) async {
@@ -55,11 +56,26 @@ class ProfileService {
     await ctx.config.save();
   }
 
-  Future<void> list(ArgvResult cli) async {
+  Future<void> show(ArgvResult cli) async {
     final ctx = cli.get<Context>();
+    final name = cli.positional('name')!;
     final profiles = ctx.config.get('profiles') as Map?;
 
-    if (profiles == null || profiles.isEmpty) {
+    if (profiles == null || !profiles.containsKey(name)) {
+      print('✗ '.red + 'Profile '.dim + name.red + ' not found'.dim);
+      return;
+    }
+
+    final defaultProfile = ctx.config.get('default_profile');
+    final profile = Profile.parse(MapEntry(name, profiles[name]));
+    profile.show(defaultProfile == name);
+  }
+
+  Future<void> list(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    final profiles = ctx.config.get('profiles');
+
+    if (profiles is! Map || profiles.isEmpty) {
       print('No profiles found'.dim.italic);
       print('Create one with: '.dim + 'mosaic profile add <name>'.cyan);
       return;
@@ -70,67 +86,13 @@ class ProfileService {
     print('');
 
     for (final entry in profiles.entries) {
-      final profile = _validateProfile(entry);
-      _showProfile(entry.key.toString(), profile, defaultProfile);
+      final profile = Profile.parse(entry);
+      profile.show(defaultProfile == profile.name.toString());
     }
 
     if (defaultProfile != null) {
       print('  ● = Default profile'.dim.italic);
     }
-  }
-
-  void _showProfile(String entryName, Map profile, String defaultProfile) {
-    final isDefault = entryName == defaultProfile;
-
-    String prefix = '○'.brightBlack;
-    String name = entryName.white;
-
-    if (isDefault) {
-      prefix = '●'.brightGreen;
-      name = entryName.bold.brightGreen;
-    }
-
-    final tesserae = profile['tesserae'] as List;
-    final defaultTessera = profile['default'];
-    final commands = profile['commands'] as Map?;
-
-    print('  $prefix $name'.padRight(20) + '($defaultTessera)'.dim);
-    print(
-      '    ├─ ${tesserae.length} tesserae: '.dim +
-          tesserae.take(3).join(', ').cyan +
-          (tesserae.length > 3 ? '...' : ''),
-    );
-
-    if (commands?.isNotEmpty == true) {
-      print(
-        '    └─ ${commands!.length} commands: '.dim +
-            commands.keys.take(2).join(', ').yellow +
-            (commands.length > 2 ? '...' : ''),
-      );
-    }
-    print('');
-  }
-
-  Map _validateProfile(MapEntry entry) {
-    final MapEntry(:key, :value) = entry;
-
-    if (value is! Map) {
-      throw CliException('$key is not a valid profile');
-    }
-
-    if (!value.containsKey('default')) {
-      throw CliException('Missing \'name\' field inside $key profile');
-    }
-    if (!value.containsKey('tesserae')) {
-      throw CliException('Missing \'tesserae\' field inside $key profile');
-    }
-
-    if (value['default'] is! String) {
-      throw CliException(
-        'Profile: $key field \'name\' must be a string, found ${value['default']}',
-      );
-    }
-    return value;
   }
 
   Future<void> exec(ArgvResult cli) async {}

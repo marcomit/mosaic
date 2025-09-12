@@ -213,22 +213,28 @@ class MosaicService {
     }
   }
 
-  void delete(ArgvResult cli) {
-    final name = cli.positional('name');
-    if (name == null) throw ArgvException('Missing tessera name');
-
-    print('');
-
-    print('⚠ Tessera deletion not yet implemented'.yellow);
-  }
-
   Future<void> status(ArgvResult cli) async {
     final ctx = cli.get<Context>();
     final root = await ctx.env.root();
+
     if (root == null) {
-      print('You\'re not in a valid project');
-    } else {
-      print('Project root: ${root.path}');
+      print('✗ '.red + 'Not in a mosaic project'.dim);
+      return;
     }
+
+    final config = ctx.config;
+    final tesserae = await ctx.tesserae();
+    final currentProfile = config.get('profile');
+    final profiles = config.get('profiles') as Map? ?? {};
+
+    print('Project: '.dim + config.get('name').toString().cyan.bold);
+    print('Root: '.dim + root.path.dim);
+    print('Profile: '.dim + (currentProfile?.toString().green ?? 'none'.red));
+    print(
+      'Tesserae: '.dim +
+          '${tesserae.length}'.cyan +
+          ' (${tesserae.where((t) => t.active).length} active)'.dim,
+    );
+    print('Profiles: '.dim + '${profiles.length}'.cyan);
   }
 }

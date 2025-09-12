@@ -69,13 +69,52 @@ ArgvCallback require(String name) {
   };
 }
 
-Argv setupProfilesCommand(Argv app) {
+void setupProfilesCommand(Argv app) {
   final profile = app.command('profile').on(check);
 
   profile.command('set').positional('name').use<ProfileService>((p) => p.set);
   profile.command('list').use<ProfileService>((p) => p.list);
+  profile.command('show').positional('name').use<ProfileService>((p) => p.show);
+}
 
-  return profile;
+void setupTesseraCommands(Argv app) {
+  final deps = app.command('deps');
+  final depsadd = deps.command(
+    'add',
+    description: 'Adds a dependency to a tessera',
+  );
+  final depsrem = deps.command(
+    'remove',
+    description: 'Removes a dependency from a tessera',
+  );
+
+  Argv.group(
+    [depsadd, depsrem],
+    (c) => c
+        .positional('tessera')
+        .positional('dependency')
+        .on(require('tessera'))
+        .on(require('dependency')),
+  );
+
+  depsadd.use<TesseraService>((t) => t.depsAdd);
+  depsrem.use<TesseraService>((t) => t.depsRemove);
+}
+
+void setupProjectCommand(Argv app) {
+  app
+    ..command(
+      'tidy',
+      description: 'Add to the root project all existing tesserae',
+    ).on(check).use<DependencyResolver>((d) => d.tidy)
+    ..command(
+      'sync',
+      description: 'Sync all tesserae and generate the initialization file',
+    ).on(check).use<MosaicService>((m) => m.sync)
+    ..command(
+      'events',
+      description: 'Build the events based on the configuration file',
+    ).on(check).use<EventService>((e) => e.generate);
 }
 
 Argv setupCli() {
@@ -103,19 +142,6 @@ Argv setupCli() {
       'add',
       description: 'Add a tessera',
     ).positional('name').on(check).use<TesseraService>((t) => t.add)
-    ..command('delete', description: 'Delete a tessera')
-        .positional('name')
-        .flag('force', abbr: 'f', defaultTo: false)
-        .on(check)
-        .use<MosaicService>((m) => m.delete)
-    ..command(
-      'tidy',
-      description: 'Add to the root project all existing tesserae',
-    ).on(check).use<DependencyResolver>((d) => d.tidy)
-    ..command(
-      'sync',
-      description: 'Sync all tesserae and generate the initialization file',
-    ).on(check).use<MosaicService>((m) => m.sync)
     ..command(
       'enable',
       description: 'Enable a tessera',
@@ -127,35 +153,12 @@ Argv setupCli() {
     ..command(
       'default',
       description: 'Set the default tessera',
-    ).positional('name').on(check).use<MosaicService>((m) => m.setDefault)
-    ..command(
-      'events',
-      description: 'Build the events based on the configuration file',
-    ).on(check).use<EventService>((e) => e.generate);
-
-  final deps = app.command('deps');
-  final depsadd = deps.command(
-    'add',
-    description: 'Adds a dependency to a tessera',
-  );
-  final depsrem = deps.command(
-    'remove',
-    description: 'Removes a dependency from a tessera',
-  );
-
-  Argv.group(
-    [depsadd, depsrem],
-    (c) => c
-        .positional('tessera')
-        .positional('dependency')
-        .on(require('tessera'))
-        .on(require('dependency')),
-  );
-
-  depsadd.use<TesseraService>((t) => t.depsAdd);
-  depsrem.use<TesseraService>((t) => t.depsRemove);
+    ).positional('name').on(check).use<MosaicService>((m) => m.setDefault);
 
   setupProfilesCommand(app);
+  setupTesseraCommands(app);
+  setupProjectCommand(app);
+
   return app;
 }
 

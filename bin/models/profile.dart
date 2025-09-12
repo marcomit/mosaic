@@ -43,43 +43,45 @@ class Profile {
   final String name;
   String defaultTessera;
   final List<String> tesserae;
-  final Map<String, List<String>> commands;
-
+  final Map<String, String> commands;
   static Profile parse(MapEntry entry) {
     final MapEntry(:key, :value) = entry;
-
     if (value is! Map) {
       throw CliException('$key is not a valid profile');
     }
 
     final requiredFields = {
-      'default': String,
-      'tesserae': List<String>,
-      'commands': Map<String, String>,
+      'default': (dynamic v) => v is String,
+      'tesserae': (dynamic v) => v is List,
+      'commands': (dynamic v) => v is Map,
     };
 
-    for (final field in requiredFields.entries) {
-      if (!value.containsKey(field.key)) {
-        throw CliException(
-          'Missing \'${field.key}\' field inside $key profile',
-        );
+    for (final entry in requiredFields.entries) {
+      if (!value.containsKey(entry.key)) {
+        throw CliException('Profile $key: missing field \'$key\'');
       }
-      if (value[field.key].runtimeType != field.value) {
-        throw CliException(
-          'Profile: $key field \'name\' must be a string, found ${value['default']}',
-        );
+      if (!entry.value(value[entry.key])) {
+        throw CliException('Profile $key: invalid type for field \'$key\'');
       }
     }
 
+    final commands = <String, String>{};
+    for (final MapEntry(:key, :value) in (value['commands'] as Map).entries) {
+      if (value is! String) {
+        throw CliException('Profile $key: command \'$key\' must be a string');
+      }
+      commands[key.toString()] = value;
+    }
+
     return Profile(
-      name: entry.key.toString(),
+      name: key.toString(),
       defaultTessera: value['default'],
-      tesserae: value['tesserae'],
-      commands: value['commands'],
+      tesserae: (value['tesserae'] as List).cast<String>(),
+      commands: commands,
     );
   }
 
-  String buffer(bool isDefault) {
+  void show(bool isDefault) {
     final buf = StringBuffer();
     String prefix = '○'.brightBlack;
     String name = this.name.white;
@@ -103,8 +105,7 @@ class Profile {
             (commands.length > 2 ? '...' : ''),
       );
     }
-    buf.writeln();
 
-    return buf.toString();
+    print(buf.toString());
   }
 }

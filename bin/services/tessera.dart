@@ -42,23 +42,23 @@ class TesseraService {
   Future<void> add(ArgvResult cli) async {
     final ctx = cli.get<Context>();
     final root = (await ctx.env.root())!;
-    String? name = cli.positional('name');
+    final subname = cli.positional('name');
 
-    if (name == null) {
+    if (subname == null) {
       throw const CliException('Missing tessera name');
     }
 
-    name = await utils.ensureExistsParent(name);
+    final name = await utils.ensureExistsParent(subname);
 
-    if (await ctx.env.exists(name)) {
-      throw CliException('Tessera $name already exists');
+    if (await ctx.env.exists(subname)) {
+      throw CliException('Tessera $subname already exists');
     }
 
     print('Creating tessera '.dim + name.cyan.bold + '...'.dim);
 
     final tessera = Tessera(
       name,
-      path: utils.join([root.path, name]),
+      path: utils.join([root.path, subname]),
       active: true,
     );
 

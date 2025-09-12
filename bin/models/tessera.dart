@@ -213,13 +213,17 @@ final module = ${capitalized}Module();
   }
 
   Future<int> create() async {
+    final dir = Directory(path).parent;
+
+    await dir.create(recursive: true);
+
     final exitCode = await utils.cmd([
       'flutter',
       'create',
       name,
       '--template',
       'package',
-    ], path: Directory(path).parent.path);
+    ], path: dir.path);
 
     if (exitCode != 0) return exitCode;
 
