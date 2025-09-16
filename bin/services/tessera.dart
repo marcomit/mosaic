@@ -41,7 +41,6 @@ import '../models/tessera.dart';
 class TesseraService {
   Future<void> add(ArgvResult cli) async {
     final ctx = cli.get<Context>();
-    final root = (await ctx.env.root())!;
     final subname = cli.positional('name');
 
     if (subname == null) {
@@ -58,7 +57,7 @@ class TesseraService {
 
     final tessera = Tessera(
       name,
-      path: utils.join([root.path, subname]),
+      path: utils.join([Directory.current.path, subname]),
       active: true,
     );
 

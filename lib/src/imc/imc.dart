@@ -32,23 +32,43 @@
 import 'dart:async';
 
 import 'package:mosaic/exceptions.dart';
-import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
+// import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 
-/// Utility class to make the callback type-safe.
-///
-/// Allows checking the expected result of the call [TResult]
-/// and the params you pass to the callback [TParams].
-class _ImcTypedCallback<TResult, TParams> {
-  _ImcTypedCallback(this.callback);
+class TypedCallback {
+  TypedCallback(this.callback, this.resultType, this.paramsType);
 
-  /// callback that handle the call.
-  final IMCCallback<TResult, TParams> callback;
+  final ImcCallback callback;
+  final Type resultType;
+  final Type paramsType;
+}
 
-  /// Result type of the given callback
-  final Type result = TResult;
+class ImcContract {
+  ImcContract(String name) : _name = name;
 
-  /// Params type of the given callback
-  final Type params = TParams;
+  final String _name;
+  final Map<String, TypedCallback> _callbacks = {};
+
+  void register<TResult, TParams>(
+    String action,
+    ImcCallback<TResult, TParams> callback,
+  ) {
+    if (_callbacks.containsKey(action)) {
+      throw ImcException(
+        'Callback $action inside $_name is already registered',
+      );
+    }
+
+    _callbacks[action] = TypedCallback(
+      // Wrap the typed callback to match ImcCallback signature
+      (ImcContext ctx) async {
+        // Cast context to correct type
+        final typedCtx = ImcContext<TParams>(ctx.path, ctx.params as TParams);
+        return await callback(typedCtx);
+      },
+      TResult,
+      TParams,
+    );
+  }
 }
 
 /// Context of the [IMCCallback].
@@ -63,37 +83,42 @@ class ImcContext<T> {
   /// and handled by the callback you've defined before.
   final T params;
   final String path;
-  final DependencyInjector di = DependencyInjector();
   // bool _next = false;
 
   // void next() => _next = true;
 }
 
-typedef IMCCallback<TResult, TParams> =
+typedef ImcCallback<TResult, TParams> =
     FutureOr<TResult> Function(ImcContext<TParams>);
 
-class ImcNode<TResult, TParams> {
-  ImcNode(this.name);
+class ImcNode {
+  ImcNode(
+    this.name, {
+    this.expectedResult = dynamic,
+    this.expectedParams = dynamic,
+  });
   final String name;
-  _ImcTypedCallback<TResult, TParams>? _callback;
+  final Type expectedResult;
+  final Type expectedParams;
+  ImcCallback? _callback;
   final Map<String, ImcNode> _children = {};
 
-  ImcNode _on(IMCCallback<TResult, TParams> callback) {
-    if (_callback == null) {
-      throw ImcException('Callback already registered');
-    }
-    _callback = _ImcTypedCallback(callback);
-    return this;
-  }
+  // ImcNode _on(ImcCallback callback) {
+  //   if (_callback != null) {
+  //     throw ImcException('Callback already registered');
+  //   }
+  //   _callback = _ImcTypedCallback(callback);
+  //   return this;
+  // }
 
-  ImcNode _sub(String name) {
-    if (_children.containsKey(name)) {
-      throw ImcException('Node $name already registered');
-    }
-    final child = ImcNode(name);
-    _children[name] = child;
-    return child;
-  }
+  // ImcNode _sub(String name) {
+  //   if (_children.containsKey(name)) {
+  //     throw ImcException('Node $name already registered');
+  //   }
+  //   final child = ImcNode(name);
+  //   _children[name] = child;
+  //   return child;
+  // }
 
   Future<(ImcNode, T)> _executeChild<T>(String name, ImcContext context) async {
     if (!_children.containsKey(name)) {
@@ -107,13 +132,7 @@ class ImcNode<TResult, TParams> {
 
     T? result;
     if (child._callback != null) {
-      if (child._callback!.params.runtimeType != context.params) {
-        throw ImcException('Mismatch params types');
-      }
-      result = await child._callback!.callback(context);
-      if (result.runtimeType != child._callback!.result) {
-        throw ImcException('Mismatch return types');
-      }
+      result = await child._callback!(context);
     }
     if (result == null) {
       throw ImcException('Cannot use null value');
@@ -122,18 +141,18 @@ class ImcNode<TResult, TParams> {
     return (child, result);
   }
 
-  Future<TResult> _exec(String args, TParams params) async {
-    final path = args.split(IMC.sep);
-    final ctx = ImcContext(args, params);
-    dynamic result;
-
-    ImcNode current = this;
-    for (final segment in path) {
-      (current, result) = await current._executeChild(segment, ctx);
-    }
-
-    return result as TResult;
-  }
+  // Future _exec(String args, dynamic params) async {
+  //   final path = args.split(Imc.sep);
+  //   final ctx = ImcContext(args, params);
+  //   dynamic result;
+  //
+  //   ImcNode current = this;
+  //   for (final segment in path) {
+  //     (current, result) = await current._executeChild(segment, ctx);
+  //   }
+  //
+  //   return result;
+  // }
 }
 
 /// IMC (Inter-Module Communication)
@@ -174,8 +193,9 @@ class ImcNode<TResult, TParams> {
 ///   // use your service here
 /// });
 /// ```
-class IMC {
+class Imc {
   final ImcNode _root = ImcNode('root');
+  final Map<String, ImcContract> _contracts = {};
   bool _disposed = false;
 
   static const String sep = '.';
@@ -184,6 +204,14 @@ class IMC {
     if (_disposed) {
       throw ImcException('Operation not permitted', cause: 'Object disposed');
     }
+  }
+
+  void handshake(ImcContract contract) {
+    if (_contracts.containsKey(contract._name)) {
+      throw ImcException('Contract ${contract._name} already registered');
+    }
+
+    _contracts[contract._name] = contract;
   }
 
   /// Register a call by string name.
@@ -205,26 +233,29 @@ class IMC {
   /// ```
   void register<TResult, TParams>(
     String call,
-    IMCCallback<TResult, TParams> callback,
+    ImcCallback<TResult, TParams> callback,
   ) {
     _checkDispose();
-
-    final path = call.split(sep);
-
-    ImcNode current = _root;
-
-    for (final segment in path) {
-      if (!current._children.containsKey(segment)) {
-        current._sub(segment);
-      }
-      current = current._children[segment]!;
-    }
-    (current)._on(callback as IMCCallback);
+    //
+    //   final path = call.split(sep);
+    //
+    //   ImcNode current = _root;
+    //
+    //   for (final segment in path) {
+    //     if (!current._children.containsKey(segment)) {
+    //       current._sub(segment);
+    //     }
+    //     current = current._children[segment]!;
+    //   }
+    //   print(current);
+    //
+    //   final ImcNode curr = current;
+    //   (curr)._on(callback);
   }
 
   /// Methods to execute raw call (String based instead of contracts).
   ///
-  /// Allows to call the imc by passing the action and the params
+  /// Alloj ws to call the imc by passing the action and the params
   /// If the action doesn't exists or there's a mismath from the passed and the expected types it throws an [ImcException].
   /// The action must be following the format 'moduleName.actionName'. See [register] for more details.
   /// So this has more restriction than using [IMCContract] with [put] and [get] but offer more isolation between modules
@@ -234,16 +265,70 @@ class IMC {
   /// final user = await imc('user.getUserById', 'user1'); // this is not typed and should be throws into an error
   /// final user = await imc<User?, String>('user.getUserById', 'user1'); // this is fully typed.
   /// ```
-  Future<TResult> call<TResult, TParams>(String action, TParams params) {
-    return execute(action, params);
+  FutureOr<TResult> call<TResult, TParams>(
+    String action, [
+    TParams? params,
+  ]) async {
+    return await execute(action, params);
   }
 
-  Future<TResult> execute<TResult, TParams>(
+  FutureOr<TResult> execute<TResult, TParams>(
+    String action, [
+    TParams? params,
+  ]) async {
+    return await _checkContract(action, params);
+  }
+
+  FutureOr<TResult> _checkContract<TResult, TParams>(
     String action,
     TParams params,
   ) async {
     final ctx = ImcContext(action, params);
-    return await _root._exec(action, ctx);
+    final path = action.split(sep);
+
+    print(path);
+    if (path.length != 2) {
+      throw ImcException(
+        'Invalid Imc action',
+        cause: 'It must be a format like \'contract${sep}action\'',
+      );
+    }
+
+    final contract = _contracts[path[0]];
+
+    print(contract);
+    if (contract == null) {
+      throw ImcException(
+        'Contract ${path[0]} not found',
+        fix: 'Try to register a contract \'${path[0]}\'',
+      );
+    }
+
+    print(contract._callbacks);
+
+    final typedCallback = contract._callbacks[path[1]]!;
+
+    if (TParams != dynamic && typedCallback.paramsType != TParams) {
+      throw ImcException(
+        'Parameter type mismatch: expected ${typedCallback.paramsType}, got $TParams',
+      );
+    }
+
+    if (TResult != dynamic && typedCallback.resultType != TResult) {
+      throw ImcException(
+        'Return type mismatch: expected ${typedCallback.resultType}, got $TResult',
+      );
+    }
+
+    final result = await typedCallback.callback(ctx);
+
+    if (result is! TResult && TResult != dynamic) {
+      throw ImcException(
+        'Runtime result type mismatch: expected $TResult, got ${result.runtimeType}',
+      );
+    }
+
+    return result as TResult;
   }
 
   /// Clear all the actions and contracts registered.

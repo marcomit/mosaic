@@ -37,6 +37,8 @@ import 'enviroment.dart';
 import 'models/tessera.dart';
 import 'utils/yaml_encoding.dart';
 import 'utils/utils.dart';
+import 'exception.dart';
+import 'models/profile.dart';
 
 class Configuration {
   Configuration();
@@ -58,6 +60,11 @@ version: 1.0.0
 default: $name
 
 events:
+
+profiles:
+  development:
+    tesserae: []
+    default: ''
 ''';
   }
 
@@ -110,6 +117,19 @@ events:
 
     _config = await readConfig(env.path);
     return _config;
+  }
+
+  Future<void> validateConfig() async {
+    final profiles = get('profiles');
+    if (profiles is! Map) throw const CliException('Invalid profiles');
+
+    profiles.entries.map(Profile.parse);
+
+    if (get('profile') == null) {
+      throw const CliException(
+        'Missing \'profile\' field inside configuration file',
+      );
+    }
   }
 
   Future<Tessera> tessera(String path) async {

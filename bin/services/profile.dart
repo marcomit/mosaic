@@ -34,22 +34,13 @@ import '../context.dart';
 import '../exception.dart';
 import '../utils/gesso.dart';
 import '../models/profile.dart';
+import '../utils/utils.dart';
 
 class ProfileService {
-  Future<void> set(ArgvResult cli) async {
+  Future<void> switchTo(ArgvResult cli) async {
     final ctx = cli.get<Context>();
 
     final name = cli.positional('name');
-
-    final profiles = ctx.config.get('profiles');
-
-    if (profiles is! Map) {
-      throw const CliException('mosaic.yaml isn\'t a valid value');
-    }
-
-    if (!profiles.containsKey(name)) {
-      throw CliException('$name is not a valid profile');
-    }
 
     ctx.config.set('profile', name);
 
@@ -95,5 +86,125 @@ class ProfileService {
     }
   }
 
-  Future<void> exec(ArgvResult cli) async {}
+  Future<void> run(ArgvResult cli) => _exec(cli, (p) => p.run);
+  Future<void> build(ArgvResult cli) => _exec(cli, (p) => p.build);
+  Future<void> exec(ArgvResult cli) async {
+    return _exec(cli, (p) => p.commands[cli.positional('command')]);
+  }
+
+  Future<void> _exec(ArgvResult cli, String? Function(Profile) command) async {
+    final ctx = cli.get<Context>();
+    final profile = await validateProfile(cli);
+
+    final cmd = command(profile);
+
+    if (cmd == null) {
+      throw CliException('Command not found in profile ${profile.name}.');
+    }
+
+    final main = await ctx.main();
+
+    final args = utils.parseCommand(cmd);
+    final code = await utils.cmd(args, path: main.path, out: true);
+
+    if (code != 0) {
+      throw const CliException('Something went wrong');
+    }
+  }
+
+  Future<Profile> validateProfile(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+
+    String? profileName = cli.positional('profile');
+
+    profileName ??= ctx.config.get('profile');
+
+    if (profileName == null) throw const CliException('Invalid profile name');
+
+    final profiles = ctx.config.get('profiles');
+    if (profiles is! Map) {
+      throw const CliException('Corruptect configuration file');
+    }
+
+    final profile = Profile.parse(MapEntry(profileName, profiles[profileName]));
+    return profile;
+  }
+
+  String getProfileName(ArgvResult cli) {
+    return cli.positional('profile') ??
+        cli.get<Context>().config.get('profile')!;
+  }
+
+  Future<void> addTessera(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    final profile = await validateProfile(cli);
+
+    final tessera = cli.positional('tessera')!;
+
+    final profiles = ctx.config.get('profiles');
+
+    if (profile.tesserae.contains(tessera)) {
+      throw CliException(
+        'Tessera $tessera already present in ${profile.name} profile.',
+      );
+    }
+
+    profile.tesserae.add(tessera);
+
+    profiles[profile.name] = profile.encode();
+
+    ctx.config.set('profiles', profiles);
+
+    await ctx.config.save();
+  }
+
+  Future<void> removeTessera(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    final profile = await validateProfile(cli);
+
+    final tessera = cli.positional('tessera')!;
+
+    if (!profile.tesserae.contains(tessera)) {
+      throw CliException(
+        'Tessera $tessera not found in ${profile.name} profile.',
+      );
+    }
+
+    profile.tesserae.remove(tessera);
+
+    if (tessera == profile.defaultTessera) {
+      throw const CliException('The default tessera cannot be removed');
+    }
+
+    if (profile.tesserae.isEmpty) {
+      throw const CliException(
+        'The profile must contains at least one tessera',
+      );
+    }
+
+    await ctx.saveProfile(profile);
+  }
+
+  Future<void> setDefault(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    final profile = await validateProfile(cli);
+
+    profile.defaultTessera = cli.positional('tessera')!;
+
+    await ctx.saveProfile(profile);
+  }
+
+  Future<void> sync(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    final tesserae = await ctx.tesserae();
+
+    final profile = await validateProfile(cli);
+
+    tesserae.removeWhere((t) => !profile.tesserae.contains(t.name));
+
+    await ctx.writeInitializationFile(
+      tesserae.toList(),
+      profile.defaultTessera,
+    );
+  }
 }

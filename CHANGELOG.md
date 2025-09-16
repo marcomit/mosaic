@@ -26,3 +26,6 @@
 ## 0.2.5
 - tidy command generates pubspec_overrides
 
+
+## 1.0.0
+- Introducing profiles configuration

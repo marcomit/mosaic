@@ -35,6 +35,7 @@ import 'package:path/path.dart' as p;
 
 import '../context.dart';
 import '../utils/gesso.dart';
+import '../exception.dart';
 import '../utils/utils.dart';
 
 /// Mosaic in this case refers like the orchestrator of the tesserae
@@ -64,16 +65,16 @@ class MosaicService {
 
   Future<void> sync(ArgvResult cli) async {
     final ctx = cli.get<Context>();
-    final content = await ctx.getInitializationFile();
+    final tesserae = await ctx.tesserae();
 
-    final name = ctx.config.get('name');
-    final root = await ctx.env.root();
+    if (tesserae.isEmpty) {
+      throw const CliException('No tesserae found in this mosaic');
+    }
 
-    final path = utils.join([root!.path, name, 'lib', 'init.dart']);
-
-    final file = await utils.ensureExists(path);
-
-    await file.writeAsString(content);
+    await ctx.writeInitializationFile(
+      tesserae.toList(),
+      tesserae.elementAt(0).name,
+    );
   }
 
   Future<void> setDefault(ArgvResult cli) async {
