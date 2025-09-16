@@ -29,3 +29,6 @@
 
 ## 1.0.0
 - Introducing profiles configuration
+
+## 1.0.1
+- Fixed argument parsing for profile's commands
