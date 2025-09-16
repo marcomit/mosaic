@@ -34,6 +34,7 @@ import 'dart:io';
 import 'config.dart';
 import 'enviroment.dart';
 import 'models/tessera.dart';
+import 'models/profile.dart';
 import 'exception.dart';
 import 'utils/gesso.dart';
 import 'utils/utils.dart';
@@ -92,9 +93,11 @@ ${lines.map((l) => '// $l').join('\n')}
     await config.loadFromEnv();
   }
 
-  Future<String> getInitializationFile() async {
-    final tesserae = await this.tesserae();
-    final sorted = Tessera.topologicalSort(tesserae.toList());
+  Future<String> getInitializationFile(
+    List<Tessera> tesserae,
+    String defaultTessera,
+  ) async {
+    final sorted = Tessera.topologicalSort(tesserae);
     final buf = StringBuffer();
     buf.writeln(
       banner([
@@ -113,23 +116,57 @@ ${lines.map((l) => '// $l').join('\n')}
     }
 
     buf.writeln();
-    buf.writeln('Future<void> init() async {');
+    buf.writeln('Future<void> init([List<Module> extras = const []]) async {');
 
     for (final tessera in sorted) {
       buf.writeln(tessera.generateInitialization());
     }
 
-    final current = config.get('default');
-    buf.writeln('  await moduleManager.initialize($current.module, [');
+    buf.writeln('  await moduleManager.initialize($defaultTessera.module, [');
 
     sorted.where((t) => t.active).forEach((t) {
       buf.writeln('    ${t.name}.module,');
     });
+    buf.writeln('    ...extras');
 
     buf.writeln('  ]);');
 
     buf.writeln('}');
 
     return buf.toString();
+  }
+
+  Future<void> writeInitializationFile(
+    List<Tessera> tesserae,
+    String defaultTessera,
+  ) async {
+    final content = await getInitializationFile(tesserae, defaultTessera);
+
+    final name = config.get('name');
+    final root = await env.root();
+
+    final path = utils.join([root!.path, name, 'lib', 'init.dart']);
+
+    final file = await utils.ensureExists(path);
+
+    await file.writeAsString(content);
+  }
+
+  Future<Directory> main() async {
+    final root = await env.root();
+
+    if (root == null) throw const CliException('Not in a valid mosaic.');
+
+    final name = config.get('name')!;
+
+    return Directory(utils.join([root.path, name]));
+  }
+
+  Future<void> saveProfile(Profile profile) async {
+    final profiles = config.get('profiles');
+
+    profiles[profile.name] = profile.encode();
+
+    await config.save();
   }
 }

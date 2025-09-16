@@ -192,6 +192,21 @@ class Utils {
     await f.create(recursive: true);
     return f;
   }
+
+  List<String> parseCommand(String command) {
+    final trimmed = command.trim();
+    if (trimmed.isEmpty) return [];
+
+    final spaceIndex = trimmed.indexOf(' ');
+    if (spaceIndex == -1) {
+      return [trimmed];
+    }
+
+    final executable = trimmed.substring(0, spaceIndex);
+    final args = trimmed.substring(spaceIndex + 1).trim();
+
+    return args.isEmpty ? [executable] : [executable, args];
+  }
 }
 
 extension StringExtension on String {

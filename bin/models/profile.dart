@@ -38,12 +38,16 @@ class Profile {
     required this.defaultTessera,
     this.tesserae = const [],
     this.commands = const {},
+    this.run,
+    this.build,
   });
 
   final String name;
   String defaultTessera;
   final List<String> tesserae;
   final Map<String, String> commands;
+  final String? run;
+  final String? build;
   static Profile parse(MapEntry entry) {
     final MapEntry(:key, :value) = entry;
     if (value is! Map) {
@@ -53,24 +57,33 @@ class Profile {
     final requiredFields = {
       'default': (dynamic v) => v is String,
       'tesserae': (dynamic v) => v is List,
-      'commands': (dynamic v) => v is Map,
+      'commands': (dynamic v) => v == null || v is Map,
+      'run': (dynamic v) => v == null || v is String,
+      'build': (dynamic v) => v == null || v is String,
     };
 
-    for (final entry in requiredFields.entries) {
-      if (!value.containsKey(entry.key)) {
-        throw CliException('Profile $key: missing field \'$key\'');
-      }
-      if (!entry.value(value[entry.key])) {
-        throw CliException('Profile $key: invalid type for field \'$key\'');
+    for (final requiredEntry in requiredFields.entries) {
+      // if (!value.containsKey(requiredEntry.key)) {
+      //   throw CliException(
+      //     'Profile $key: missing field \'${requiredEntry.key}\'',
+      //   );
+      // }
+      if (!requiredEntry.value(value[requiredEntry.key])) {
+        throw CliException(
+          'Profile $key: invalid type for field \'${requiredEntry.key}\'',
+        );
       }
     }
 
     final commands = <String, String>{};
-    for (final MapEntry(:key, :value) in (value['commands'] as Map).entries) {
-      if (value is! String) {
-        throw CliException('Profile $key: command \'$key\' must be a string');
+
+    if (value['commands'] != null) {
+      for (final MapEntry(:key, :value) in (value['commands'] as Map).entries) {
+        if (value is! String) {
+          throw CliException('Profile $key: command \'$key\' must be a string');
+        }
+        commands[key.toString()] = value;
       }
-      commands[key.toString()] = value;
     }
 
     return Profile(
@@ -78,6 +91,8 @@ class Profile {
       defaultTessera: value['default'],
       tesserae: (value['tesserae'] as List).cast<String>(),
       commands: commands,
+      run: value['run'],
+      build: value['build'],
     );
   }
 
@@ -107,5 +122,13 @@ class Profile {
     }
 
     print(buf.toString());
+  }
+
+  Map<String, dynamic> encode() {
+    return {
+      'default': defaultTessera,
+      'tesserae': tesserae,
+      'commands': commands,
+    };
   }
 }
