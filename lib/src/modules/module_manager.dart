@@ -217,7 +217,7 @@ class ModuleManager with Loggable {
     info('Activated module ${module.name}');
 
     mosaic.events.emit<String>(
-      ['module_manager', 'module_activated'].join(Events.sep),
+      ['module_manager', 'module_activated'].join(mosaic.events.sep),
       module.name,
     );
   }
