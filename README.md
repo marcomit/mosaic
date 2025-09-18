@@ -5,137 +5,214 @@
 [![Flutter](https://img.shields.io/badge/Flutter-%3E%3D1.17.0-blue.svg)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-%5E3.8.1-blue.svg)](https://dart.dev)
 
-Mosaic is a powerful, modular Flutter architecture that enables clean separation of features using dynamic modules, internal event systems, UI injection, and centralized build orchestration. It helps large applications scale with ease by treating each feature as an isolated unit that can be enabled, built, and tested independently.
+Mosaic is a comprehensive Flutter architecture framework designed for building scalable, modular applications. It provides a complete ecosystem for managing large applications through independent modules with their own lifecycle, dependencies, and communication patterns.
 
-## Features
+## Table of Contents
 
-- ** Modular Architecture**: Organize your app into independent, reusable modules
-- ** Event-Driven Communication**: Decoupled communication between modules using a robust event system
-- ** Dynamic UI Injection**: Inject UI components dynamically across different modules
-- ** Internal Navigation**: Module-specific routing with stack management
-- ** Advanced Logging**: Multi-dispatcher logging system with file and console output
-- ** Thread Safety**: Built-in mutex and semaphore utilities for concurrent operations
-- ** Auto Queue**: Automatic retry mechanism for async operations
-- ** Type-Safe Events**: Strongly typed event system with wildcard support
-
-## Installation
-
-Add this to your package's `pubspec.yaml` file:
-
-```yaml
-dependencies:
-  mosaic: ^0.0.1
-```
-
-Then run:
-
-```bash
-flutter pub get
-```
+- [Architecture Overview](#architecture-overview)
+- [Core Components](#core-components)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Module Lifecycle](#module-lifecycle)
+- [Event System](#event-system)
+  - [Basic Events](#basic-events)
+  - [Wildcard Patterns](#wildcard-patterns)
+  - [Event Chains with Segments](#event-chains-with-segments)
+  - [Retained Events](#retained-events)
+- [Navigation](#navigation)
+  - [Inter-Module Navigation](#inter-module-navigation)
+  - [Intra-Module Navigation](#intra-module-navigation)
+  - [Navigation Extensions](#navigation-extensions)
+- [Dependency Injection](#dependency-injection)
+- [UI Injection](#ui-injection)
+- [Reactive State Management](#reactive-state-management)
+  - [Signals](#signals)
+  - [Computed Signals](#computed-signals)
+- [Logging System](#logging-system)
+  - [Basic Logging](#basic-logging)
+  - [Logger Configuration](#logger-configuration)
+- [Thread Safety](#thread-safety)
+  - [Mutex for Safe Data Access](#mutex-for-safe-data-access)
+  - [Semaphore for Concurrency Control](#semaphore-for-concurrency-control)
+  - [Auto Retry Queue](#auto-retry-queue)
+- [CLI Tool Usage](#cli-tool-usage)
+  - [Project Management](#project-management)
+  - [Module Management](#module-management)
+  - [Profile System](#profile-system)
+  - [Code Generation](#code-generation)
+- [Testing](#testing)
+  - [Module Testing](#module-testing)
+  - [Event System Testing](#event-system-testing)
+- [Production Considerations](#production-considerations)
+  - [Performance Optimization](#performance-optimization)
+  - [Error Handling](#error-handling)
+  - [Security](#security)
+  - [Monitoring](#monitoring)
+- [Migration Guide](#migration-guide)
+  - [From Existing Architecture](#from-existing-architecture)
+  - [Breaking Changes](#breaking-changes)
+- [Contributing](#contributing)
+  - [Development Setup](#development-setup)
+- [License](#license)
+- [Support](#support)
 
 ## Architecture Overview
 
-Mosaic follows a modular architecture pattern where each feature is encapsulated in its own module. The architecture consists of several key components:
+Mosaic implements a module-based architecture where each feature is encapsulated as an independent module with its own:
 
+- **Lifecycle Management**: Initialize, activate, suspend, resume, and dispose modules
+- **Dependency Injection**: Isolated DI containers per module
+- **Event System**: Type-safe inter-module communication
+- **Navigation Stack**: Internal navigation within modules
+- **UI Injection**: Dynamic UI component injection across modules
+
+```mermaid
+graph TB
+    A[Application] --> B[Module Manager]
+    B --> C[Module A]
+    B --> D[Module B]
+    B --> E[Module C]
+    
+    C --> F[DI Container A]
+    C --> G[Navigation Stack A]
+    C --> H[Event System]
+    
+    D --> I[DI Container B]
+    D --> J[Navigation Stack B]
+    D --> H
+    
+    E --> K[DI Container C]
+    E --> L[Navigation Stack C]
+    E --> H
+    
+    H --> M[Global Events]
+    H --> N[UI Injector]
+    H --> O[Logger]
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│     Module A    │    │     Module B    │    │     Module C    │
-│  ┌───────────┐  │    │  ┌───────────┐  │    │  ┌───────────┐  │
-│  │   Widget  │  │    │  │   Widget  │  │    │  │   Widget  │  │
-│  └───────────┘  │    │  └───────────┘  │    │  └───────────┘  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-                    ┌─────────────────┐
-                    │  Event System   │
-                    │   • Events      │
-                    │   • Router      │
-                    │   • Injector    │
-                    └─────────────────┘
+
+## Core Components
+
+### Module System
+Modules are the fundamental building blocks of a Mosaic application. Each module represents a feature or domain with complete isolation from other modules.
+
+### Event-Driven Communication
+A robust event system enables decoupled communication between modules using channels, wildcards, and type-safe data exchange.
+
+### Dynamic UI Injection
+Inject UI components from one module into designated areas of another module without creating tight coupling.
+
+### Comprehensive Logging
+Multi-dispatcher logging system supporting console, file, and custom outputs with tag-based filtering and automatic rate limiting.
+
+### Thread Safety
+Built-in concurrency primitives including mutexes, semaphores, and automatic retry queues for safe multi-threaded operations.
+
+## Installation
+
+Add Mosaic to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  mosaic: ^1.0.1
+```
+
+Install the CLI tool globally:
+
+```bash
+dart pub global activate mosaic
 ```
 
 ## Quick Start
 
-### 1. Define Your Modules
+### 1. Create a New Project
 
-Create an enum for your modules:
-
-```dart
-enum ModuleEnum {
-  home,
-  profile,
-  settings;
-
-  static ModuleEnum? tryParse(String value) {
-    for (final m in values) {
-      if (m.name == value) return m;
-    }
-    return null;
-  }
-}
+```bash
+mosaic init my_app
+cd my_app
 ```
 
-### 2. Create a Module
+### 2. Add Modules (Tesserae)
+
+```bash
+mosaic tessera add user
+mosaic tessera add dashboard
+mosaic tessera add settings
+```
+
+### 3. Define Module Implementation
 
 ```dart
+// lib/user/user.dart
 import 'package:flutter/material.dart';
 import 'package:mosaic/mosaic.dart';
 
-class HomeModule extends Module {
-  HomeModule() : super(name: 'home');
+class UserModule extends Module {
+  UserModule() : super(name: 'user');
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
-      body: Column(
-        children: [
-          const Text('Welcome to Home Module'),
-          // Display any injected widgets
-          ...stack,
-        ],
-      ),
-    );
+    return UserHomePage();
   }
 
   @override
   Future<void> onInit() async {
-    // Initialize module-specific resources
-    logger.info('Home module initialized');
+    // Initialize services
+    di.put<UserRepository>(UserRepositoryImpl());
+    di.put<AuthService>(AuthServiceImpl());
+    
+    // Setup event listeners
+    events.on<String>('auth/logout', _handleLogout);
   }
 
-  @override
-  void onActive() {
-    // Called when this module becomes active
-    logger.info('Home module activated');
+  void _handleLogout(EventContext<String> context) {
+    // Handle logout logic
+    clear(); // Clear navigation stack
   }
 }
+
+class UserHomePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('User Profile')),
+      body: Column(
+        children: [
+          Text('Welcome to User Module'),
+          ElevatedButton(
+            onPressed: () => context.go('dashboard'),
+            child: Text('Go to Dashboard'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final module = UserModule();
 ```
 
-### 3. Register and Use Modules
+### 4. Configure Application
 
 ```dart
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:mosaic/mosaic.dart';
+import 'init.dart'; // Generated by CLI
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
   // Initialize logger
-  await logger.init(
-    tags: ['app', 'router', 'events'],
+  await mosaic.logger.init(
+    tags: ['app', 'navigation', 'events'],
     dispatchers: [
       ConsoleDispatcher(),
       FileLoggerDispatcher(path: 'logs'),
     ],
   );
 
-  // Register modules
-  moduleManager.modules['home'] = HomeModule();
-  moduleManager.modules['profile'] = ProfileModule();
-  moduleManager.defaultModule = 'home';
-
-  // Initialize router
-  router.init(ModuleEnum.home);
+  // Initialize modules
+  await init();
 
   runApp(MyApp());
 }
@@ -144,81 +221,214 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Mosaic Demo',
-      home: ModularApp(),
+      title: 'My Mosaic App',
+      home: MosaicScope(),
     );
+  }
+}
+```
+
+## Module Lifecycle
+
+Modules follow a comprehensive lifecycle with automatic state management:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Uninitialized
+    Uninitialized --> Initializing: initialize()
+    Initializing --> Active: onInit() success
+    Initializing --> Error: onInit() fails
+    Active --> Suspended: suspend()
+    Suspended --> Active: resume()
+    Active --> Disposing: dispose()
+    Error --> Uninitialized: recover()
+    Disposing --> Disposed
+    Disposed --> [*]
+```
+
+### Lifecycle Hooks
+
+```dart
+class MyModule extends Module {
+  @override
+  Future<void> onInit() async {
+    // Called during initialization
+    // Setup services, load configuration
+  }
+
+  @override
+  void onActive(RouteTransitionContext ctx) {
+    // Called when module becomes active
+    // Start background tasks, refresh data
+  }
+
+  @override
+  Future<void> onSuspend() async {
+    // Called when module is suspended
+    // Pause operations, save state
+  }
+
+  @override
+  Future<void> onDispose() async {
+    // Called during cleanup
+    // Release resources, save persistent state
+  }
+
+  @override
+  Future<bool> onRecover() async {
+    // Called to recover from error state
+    return true; // Return false to prevent recovery
   }
 }
 ```
 
 ## Event System
 
-Mosaic includes a powerful event system for decoupled communication between modules.
-
 ### Basic Events
 
 ```dart
 // Listen to events
-events.on<String>('user/login', (context) {
-  print('User logged in: ${context.data}');
+events.on<UserData>('user/profile/updated', (context) {
+  print('Profile updated: ${context.data?.name}');
 });
 
 // Emit events
-events.emit<String>('user/login', 'john_doe');
+events.emit<UserData>('user/profile/updated', userData);
 ```
 
-### Wildcard Events
+### Wildcard Patterns
 
 ```dart
-// Listen to all user events
-events.on<String>('user/*', (context) {
+// Listen to any user event
+events.on<dynamic>('user/*', (context) {
   print('User event: ${context.name}');
+  // context.params contains matched segments
 });
 
-// Listen to all events under a path
-events.on<String>('user/#', (context) {
-  print('Any user-related event: ${context.params}');
+// Listen to all nested events
+events.on<dynamic>('user/profile/#', (context) {
+  print('Profile event: ${context.params}');
 });
 ```
 
-### Event Chains
+### Event Chains with Segments
 
 ```dart
-class UserSegment extends Segment {
-  UserSegment() : super('user');
+class UserEvents extends Segment {
+  UserEvents() : super('user');
 }
 
-final userEvents = UserSegment();
+final userEvents = UserEvents();
 
-// Chain events
-userEvents.$('profile').$('update').emit<Map<String, String>>({
-  'name': 'John Doe',
-  'email': 'john@example.com'
-});
+// Chain event paths
+userEvents.$('profile').$('avatar').emit<String>('new_avatar.jpg');
 
 // Listen to chained events
-userEvents.$('profile').$('update').on<Map<String, String>>((context) {
-  print('Profile updated: ${context.data}');
+userEvents.$('profile').$('*').on<dynamic>((context) {
+  print('Profile event: ${context.params[0]}');
 });
+```
+
+### Retained Events
+
+```dart
+// Emit retained event
+events.emit<bool>('app/ready', true, true);
+
+// Late subscribers will receive the retained event
+events.on<bool>('app/ready', (context) {
+  print('App is ready: ${context.data}');
+});
+```
+
+## Navigation
+
+### Inter-Module Navigation
+
+```dart
+// Navigate between modules
+await router.go<String>('dashboard');
+await router.go<UserData>('user', currentUser);
+
+// Go back to previous module
+router.goBack<String>('Operation completed');
+```
+
+### Intra-Module Navigation
+
+```dart
+// Push page within current module
+final result = await router.push<String>(EditProfilePage());
+
+// Pop from module stack
+router.pop<String>('Profile saved');
+
+// Clear module stack
+router.clear();
+```
+
+### Navigation Extensions
+
+```dart
+// Context extensions for convenient navigation
+ElevatedButton(
+  onPressed: () => context.go('settings'),
+  child: Text('Settings'),
+)
+
+ElevatedButton(
+  onPressed: () async {
+    final result = await context.push<bool>(EditPage());
+    if (result == true) {
+      // Handle success
+    }
+  },
+  child: Text('Edit'),
+)
+```
+
+## Dependency Injection
+
+Each module has its own isolated DI container:
+
+```dart
+class MyModule extends Module {
+  @override
+  Future<void> onInit() async {
+    // Singleton instance
+    di.put<DatabaseService>(DatabaseServiceImpl());
+    
+    // Factory (new instance each time)
+    di.factory<HttpClient>(() => HttpClient());
+    
+    // Lazy singleton (created on first access)
+    di.lazy<ExpensiveService>(() => ExpensiveService());
+  }
+
+  void someMethod() {
+    final db = di.get<DatabaseService>();
+    final client = di.get<HttpClient>(); // New instance
+    final expensive = di.get<ExpensiveService>(); // Created if needed
+  }
+}
 ```
 
 ## UI Injection
 
-Dynamically inject UI components into different parts of your application:
+Dynamically inject UI components across modules:
 
 ```dart
-// In a module, inject a widget
+// In source module - inject component
 class ProfileModule extends Module {
   @override
   void onInit() {
-    // Inject a profile widget into the home module
     injector.inject(
-      'home/sidebar',
+      'dashboard/sidebar',
       ModularExtension(
         (context) => ListTile(
           leading: Icon(Icons.person),
           title: Text('Profile'),
-          onTap: () => router.goto(ModuleEnum.profile),
+          onTap: () => context.go('profile'),
         ),
         priority: 1,
       ),
@@ -226,224 +436,370 @@ class ProfileModule extends Module {
   }
 }
 
-// In the receiving widget
-class ModularSidebar extends ModularStatefulWidget {
-  const ModularSidebar({Key? key}) : super(key: key, path: ['home', 'sidebar']);
+// In target module - receive components
+class DashboardSidebar extends ModularStatefulWidget {
+  const DashboardSidebar({Key? key}) 
+    : super(key: key, path: ['dashboard', 'sidebar']);
 
   @override
-  ModularState<ModularSidebar> createState() => _ModularSidebarState();
+  ModularState<DashboardSidebar> createState() => _DashboardSidebarState();
 }
 
-class _ModularSidebarState extends ModularState<ModularSidebar> {
-  _ModularSidebarState() : super('sidebar');
+class _DashboardSidebarState extends ModularState<DashboardSidebar> {
+  _DashboardSidebarState() : super('sidebar');
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: extensions.map((ext) => ext.builder(context)).toList(),
+      children: [
+        Text('Dashboard Menu'),
+        ...extensions.map((ext) => ext.builder(context)),
+      ],
     );
   }
 }
 ```
 
-## Navigation & Routing
+## Reactive State Management
 
-Mosaic provides both module-level and internal navigation:
-
-### Module Navigation
+### Signals
 
 ```dart
-// Navigate to a different module
-router.goto(ModuleEnum.profile);
+class CounterModule extends Module {
+  final counter = Signal<int>(0);
+  final user = AsyncSignal<User>(() => api.getCurrentUser());
 
-// Go back to previous module
-router.goBack();
-
-// Clear current module's internal stack
-router.clear();
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Watch signal changes
+        counter.when(
+          Text('Count: ${counter.state}'),
+        ),
+        
+        // Handle async state
+        user.then(
+          success: (user) => Text('Hello ${user.name}'),
+          loading: () => CircularProgressIndicator(),
+          error: (error) => Text('Error: $error'),
+          orElse: () => Text('No user data'),
+        ),
+        
+        ElevatedButton(
+          onPressed: () => counter.state++,
+          child: Text('Increment'),
+        ),
+      ],
+    );
+  }
+}
 ```
 
-### Internal Navigation
+### Computed Signals
 
 ```dart
-// Push a widget to the current module's stack
-Future<String?> result = router.push<String>(
-  ProfileEditPage(userId: '123')
-);
+final name = Signal<String>('John');
+final age = Signal<int>(25);
 
-// Pop from the current module's stack
-router.pop<String>('Profile updated successfully');
+// Computed signal automatically updates
+final greeting = name.computed((value) => 'Hello, $value');
+
+// Combined signals
+final profile = name.combine(age, (name, age) => '$name ($age years old)');
 ```
 
 ## Logging System
 
-Mosaic includes a comprehensive logging system with multiple dispatchers:
-
 ### Basic Logging
 
 ```dart
-// Initialize logger with tags and dispatchers
+class MyModule extends Module with Loggable {
+  @override
+  List<String> get loggerTags => ['user', 'authentication'];
+
+  Future<void> loginUser(String email) async {
+    info('Login attempt for $email'); // Auto-tagged
+    
+    try {
+      final user = await authService.login(email);
+      info('Login successful for $email');
+    } catch (e) {
+      error('Login failed: $e');
+    }
+  }
+}
+```
+
+### Logger Configuration
+
+```dart
 await logger.init(
-  tags: ['app', 'network', 'ui'],
+  tags: ['app', 'network', 'database'],
   dispatchers: [
     ConsoleDispatcher(),
     FileLoggerDispatcher(
       path: 'logs',
-      fileNameRole: (tag) => '${tag}_${DateTime.now().millisecondsSinceEpoch}.log',
+      fileNameRole: (tag) => '${tag}_${DateTime.now().day}.log',
     ),
   ],
 );
 
-// Log messages
-logger.info('Application started', ['app']);
-logger.error('Network request failed', ['network']);
-logger.debug('UI element rendered', ['ui']);
-```
+// Add message formatters
+logger.addWrapper(Logger.addData); // Timestamp
+logger.addWrapper(Logger.addType); // Log level
+logger.addWrapper(Logger.addTags); // Tag list
 
-### Module-Specific Logging
-
-```dart
-class HomeModule extends Module with Loggable {
-  @override
-  List<String> get loggerTags => ['home'];
-
-  void someMethod() {
-    info('Home module method called'); // Automatically tagged with 'home'
-  }
-}
+// Set log level for production
+logger.setLogLevel(LogLevel.warning);
 ```
 
 ## Thread Safety
 
-Use Mosaic's thread-safe utilities for concurrent operations:
-
-### Mutex
+### Mutex for Safe Data Access
 
 ```dart
-final mutex = Mutex<List<String>>(['item1', 'item2']);
+final userCache = Mutex<Map<String, User>>({});
 
-// Safe read
-List<String> items = await mutex.get();
+// Safe read/write operations
+final users = await userCache.get();
+await userCache.set({...users, 'new_id': newUser});
 
-// Safe write
-await mutex.set(['item1', 'item2', 'item3']);
-
-// Safe operation
-await mutex.use((items) async {
-  items.add('item4');
-  await someAsyncOperation(items);
+// Safe compound operations
+await userCache.use((users) async {
+  users['user_id'] = await loadUser('user_id');
+  await saveToDatabase(users);
 });
 ```
 
-### Semaphore
+### Semaphore for Concurrency Control
 
 ```dart
-final semaphore = Semaphore();
+final downloadSemaphore = Semaphore(); // Allow 1 concurrent operation
 
-Future<void> criticalSection() async {
-  await semaphore.lock();
+Future<void> downloadFile(String url) async {
+  await downloadSemaphore.lock();
   try {
-    // Critical code here
+    // Download file
   } finally {
-    semaphore.release();
+    downloadSemaphore.release();
   }
 }
 ```
 
-## Auto Queue
-
-Handle async operations with automatic retry:
+### Auto Retry Queue
 
 ```dart
-final queue = InternalAutoQueue();
+final queue = InternalAutoQueue(maxRetries: 3);
 
-// Add operation to queue with automatic retry
-String result = await queue.push<String>(() async {
-  // This will be retried up to MAX_RETRIES times on failure
-  return await someUnreliableAsyncOperation();
+// Operations are automatically retried on failure
+final result = await queue.push<String>(() async {
+  final response = await http.get(unreliableEndpoint);
+  if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
+  return response.body;
 });
+```
+
+## CLI Tool Usage
+
+### Project Management
+
+```bash
+# Create new project
+mosaic init my_project
+
+# Show project status
+mosaic status
+
+# List all modules
+mosaic tessera list
+```
+
+### Module Management
+
+```bash
+# Add new module
+mosaic tessera add user_profile
+
+# Enable/disable modules
+mosaic tessera enable user_profile
+mosaic tessera disable old_feature
+
+# Manage dependencies
+mosaic deps add user_profile authentication
+mosaic deps remove user_profile old_service
+```
+
+### Profile System
+
+```bash
+# Create development profile
+mosaic profile add development user_profile dashboard settings
+
+# Switch profiles
+mosaic profile switch development
+
+# Run profile-specific commands
+mosaic run development
+mosaic build production
+```
+
+### Code Generation
+
+```bash
+# Generate type-safe event classes
+mosaic events generate
+
+# Sync modules and generate init files
+mosaic sync
 ```
 
 ## Testing
 
-Mosaic is designed with testability in mind:
+### Module Testing
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mosaic/mosaic.dart';
 
 void main() {
-  group('Module Tests', () {
-    late HomeModule homeModule;
+  group('UserModule Tests', () {
+    late UserModule userModule;
+    late MockUserRepository mockRepo;
 
-    setUp(() {
-      homeModule = HomeModule();
+    setUp(() async {
+      userModule = UserModule();
+      mockRepo = MockUserRepository();
+      
+      // Override dependencies for testing
+      userModule.di.override<UserRepository>(mockRepo);
+      
+      await userModule.initialize();
     });
 
-    test('should initialize correctly', () async {
-      await homeModule.onInit();
-      expect(homeModule.name, equals('home'));
-      expect(homeModule.active, isTrue);
+    tearDown(() async {
+      await userModule.dispose();
+    });
+
+    test('should load user profile on init', () async {
+      when(mockRepo.getCurrentUser()).thenAnswer((_) async => testUser);
+      
+      await userModule.onInit();
+      
+      verify(mockRepo.getCurrentUser()).called(1);
     });
 
     test('should handle navigation stack', () async {
-      final widget = Container();
-      final future = homeModule.push<String>(widget);
+      final widget = ProfileEditPage();
+      final future = userModule.push<String>(widget);
       
-      expect(homeModule.stack.length, equals(1));
+      expect(userModule.stackDepth, equals(1));
       
-      homeModule.pop<String>('test result');
+      userModule.pop<String>('saved');
       final result = await future;
       
-      expect(result, equals('test result'));
-      expect(homeModule.stack.length, equals(0));
-    });
-  });
-
-  group('Event System Tests', () {
-    test('should emit and receive events', () async {
-      String? receivedData;
-      
-      events.on<String>('test/event', (context) {
-        receivedData = context.data;
-      });
-      
-      events.emit<String>('test/event', 'test data');
-      
-      await Future.delayed(Duration.zero); // Allow event processing
-      expect(receivedData, equals('test data'));
+      expect(result, equals('saved'));
+      expect(userModule.stackDepth, equals(0));
     });
   });
 }
 ```
 
-## API Reference
+### Event System Testing
 
-### Core Classes
+```dart
+group('Events Tests', () {
+  test('should emit and receive events', () async {
+    String? receivedData;
+    
+    events.on<String>('test/event', (context) {
+      receivedData = context.data;
+    });
+    
+    events.emit<String>('test/event', 'test data');
+    
+    await Future.delayed(Duration.zero);
+    expect(receivedData, equals('test data'));
+  });
 
-- **`Module`**: Base class for creating application modules
-- **`Events`**: Global event system for decoupled communication
-- **`ModuleManager`**: Singleton for managing all application modules
-- **`InternalRouter`**: Navigation system for module switching
-- **`UIInjector`**: System for dynamic UI component injection
-- **`Logger`**: Comprehensive logging system with multiple dispatchers
+  test('should handle wildcard patterns', () async {
+    final receivedEvents = <String>[];
+    
+    events.on<String>('user/*/update', (context) {
+      receivedEvents.add(context.params[0]);
+    });
+    
+    events.emit<String>('user/profile/update', 'profile data');
+    events.emit<String>('user/settings/update', 'settings data');
+    
+    await Future.delayed(Duration.zero);
+    expect(receivedEvents, containsAll(['profile', 'settings']));
+  });
+});
+```
 
-### Utilities
+## Production Considerations
 
-- **`Mutex<T>`**: Thread-safe data access
-- **`Semaphore`**: Concurrency control
-- **`InternalAutoQueue`**: Automatic retry queue for async operations
-- **`Segment`**: Event path builder with chaining support
+### Performance Optimization
+
+- Use specific log tags in production to reduce overhead
+- Set appropriate log levels (warning or error) for production
+- Enable rate limiting for high-traffic event channels
+- Consider lazy loading for expensive module dependencies
+
+### Error Handling
+
+- Implement comprehensive error recovery in modules
+- Use circuit breaker patterns for external service calls
+- Monitor module health status regularly
+- Set up alerting for critical module failures
+
+### Security
+
+- Validate all data passed through events
+- Sanitize user inputs in UI injection components
+- Use proper access controls for sensitive modules
+- Regular security audits of inter-module communications
+
+### Monitoring
+
+```dart
+// Monitor module health
+final healthStatus = mosaic.registry.getHealthStatus();
+for (final entry in healthStatus.entries) {
+  final moduleName = entry.key;
+  final health = entry.value;
+  
+  if (health['hasError']) {
+    alertService.notifyModuleError(moduleName, health['lastError']);
+  }
+}
+```
+
+## Migration Guide
+
+### From Existing Architecture
+
+1. **Identify Feature Boundaries**: Map existing features to modules
+2. **Extract Dependencies**: Move shared services to appropriate modules
+3. **Convert Navigation**: Replace existing routing with Mosaic navigation
+4. **Update State Management**: Migrate to Signals or keep existing solution
+5. **Add Event Communication**: Replace tight coupling with events
+
+### Breaking Changes
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed migration instructions between versions.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
 ### Development Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-repo/mosaic.git
+# Clone repository
+git clone https://github.com/marcomit/mosaic.git
+cd mosaic
 
 # Install dependencies
 flutter pub get
@@ -451,23 +807,17 @@ flutter pub get
 # Run tests
 flutter test
 
-# Run example
-cd example
-flutter run
+# Install CLI locally
+dart pub global activate --source path .
 ```
 
 ## License
 
-This project is licensed under the BSD 3-Clause License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the BSD 3-Clause License. See [LICENSE](LICENSE) for details.
 
 ## Support
 
-If you have any questions or need help, please:
-
-1. Check the [documentation](https://pub.dev/packages/mosaic)
-2. Open an [issue](https://github.com/marcomit/mosaic/issues)
-3. Start a [discussion](https://github.com/marcomit/mosaic/discussions)
-
----
-
-**Built with ❤️ for the Flutter community**
+- **Documentation**: [Mosaic Docs](https://pub.dev/packages/mosaic)
+- **Issues**: [GitHub Issues](https://github.com/marcomit/mosaic/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/marcomit/mosaic/discussions)
+- **Package**: [pub.dev](https://pub.dev/packages/mosaic)
