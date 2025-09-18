@@ -152,7 +152,7 @@ class InternalRouter with Loggable {
 
     mosaic.registry.currentModule = _history.last.module;
     mosaic.events.emit<RouteTransitionContext>(
-      ['router', 'change', module].join(Events.sep),
+      ['router', 'change', module].join(mosaic.events.sep),
       ctx,
     );
   }

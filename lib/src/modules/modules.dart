@@ -223,7 +223,7 @@ abstract class Module with Loggable {
     debug('Module $name: $oldState → $newState');
 
     mosaic.events.emit<ModuleLifecycleState>(
-      ['module', name, 'state_changed'].join(Events.sep),
+      ['module', name, 'state_changed'].join(mosaic.events.sep),
       newState,
       true,
     );
@@ -428,8 +428,7 @@ abstract class Module with Loggable {
   Future<T> push<T>(Widget widget) {
     final entry = InternalRoute(Completer<T>(), widget);
     _stack.add(entry);
-    mosaic.logger.info('$name PUSH ${_stack.length}', ['router']);
-    mosaic.events.emit<String>(['router', 'push'].join(Events.sep), '');
+    mosaic.events.emit<String>(['router', 'push'].join(mosaic.events.sep), '');
     return entry.completer.future;
   }
 
@@ -446,8 +445,7 @@ abstract class Module with Loggable {
   void pop<T>([T? value]) {
     if (_stack.isEmpty) return;
     final c = _stack.removeLast().completer;
-    mosaic.logger.info('$name POP ${_stack.length}', ['router']);
-    mosaic.events.emit<String>(['router', 'pop'].join(Events.sep), '');
+    mosaic.events.emit<String>(['router', 'pop'].join(mosaic.events.sep), '');
     c.complete(value);
   }
 
@@ -458,7 +456,7 @@ abstract class Module with Loggable {
   void clear() {
     while (_stack.isNotEmpty) {
       _stack.removeLast().completer.complete(null);
-      mosaic.events.emit<String>(['router', 'pop'].join(Events.sep), '');
+      mosaic.events.emit<String>(['router', 'pop'].join(mosaic.events.sep), '');
     }
   }
   // Lifecycle hooks - override these in subclasses

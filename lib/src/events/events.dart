@@ -157,8 +157,10 @@ typedef EventCallback<T> = void Function(EventContext<T>);
 /// events.deafen(listener);
 /// ```
 class Events {
+  Events([this.sep = '/']);
+
   /// Segment separator for channels (default: `/`).
-  static String sep = '/';
+  String sep;
 
   final List<EventListener> _listeners = [];
 
