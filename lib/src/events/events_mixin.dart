@@ -30,6 +30,7 @@
 */
 
 import 'package:flutter/widgets.dart';
+import 'package:mosaic/src/mosaic.dart';
 
 import 'events.dart';
 
@@ -53,7 +54,7 @@ mixin Admissible<T extends StatefulWidget> on State<T> {
   final List<EventListener> _listeners = [];
 
   EventListener<E> on<E>(String channel, EventCallback<E> callback) {
-    final listener = events.on(channel, callback);
+    final listener = mosaic.events.on(channel, callback);
     _listeners.add(listener);
     return listener;
   }
@@ -61,7 +62,7 @@ mixin Admissible<T extends StatefulWidget> on State<T> {
   @override
   void dispose() {
     for (final listener in _listeners) {
-      events.deafen(listener);
+      mosaic.events.deafen(listener);
     }
     super.dispose();
   }

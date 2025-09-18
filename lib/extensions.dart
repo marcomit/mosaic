@@ -30,21 +30,16 @@
 */
 
 import 'package:flutter/widgets.dart';
-import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
-import 'package:mosaic/src/routing/router.dart';
+import 'package:mosaic/src/mosaic.dart';
 import 'package:mosaic/src/signal/signal_watch.dart';
 import 'package:mosaic/src/signal/signal.dart';
 
 extension RouteExtension on BuildContext {
-  Future<T> push<T>(Widget page) => router.push(page);
-  void pop<T>([T? value]) => router.pop(value);
+  Future<T> push<T>(Widget page) => mosaic.router.push(page);
+  void pop<T>([T? value]) => mosaic.router.pop(value);
 
-  void go<T>(String name, [T? value]) => router.go(name, value);
-  void goBack<T>([T? value]) => router.goBack(value);
-}
-
-extension DependencyExtension on BuildContext {
-  T get<T extends Object>() => global.get<T>();
+  void go<T>(String name, [T? value]) => mosaic.router.go(name, value);
+  void goBack<T>([T? value]) => mosaic.router.goBack(value);
 }
 
 extension SignalWatchExtension<T> on Signal<T> {

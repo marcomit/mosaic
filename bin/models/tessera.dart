@@ -242,7 +242,7 @@ final module = ${capitalized}Module();
         })
         .join('\n');
     return '''$deps
-  await moduleManager.register($name.module);
+  await mosaic.registry.register($name.module);
 ''';
   }
 }

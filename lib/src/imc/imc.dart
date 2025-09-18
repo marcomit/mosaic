@@ -31,7 +31,8 @@
 
 import 'dart:async';
 
-import 'package:mosaic/exceptions.dart';
+import 'package:mosaic/mosaic.dart';
+
 // import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 
 class TypedCallback {
@@ -91,70 +92,6 @@ class ImcContext<T> {
 typedef ImcCallback<TResult, TParams> =
     FutureOr<TResult> Function(ImcContext<TParams>);
 
-class ImcNode {
-  ImcNode(
-    this.name, {
-    this.expectedResult = dynamic,
-    this.expectedParams = dynamic,
-  });
-  final String name;
-  final Type expectedResult;
-  final Type expectedParams;
-  ImcCallback? _callback;
-  final Map<String, ImcNode> _children = {};
-
-  // ImcNode _on(ImcCallback callback) {
-  //   if (_callback != null) {
-  //     throw ImcException('Callback already registered');
-  //   }
-  //   _callback = _ImcTypedCallback(callback);
-  //   return this;
-  // }
-
-  // ImcNode _sub(String name) {
-  //   if (_children.containsKey(name)) {
-  //     throw ImcException('Node $name already registered');
-  //   }
-  //   final child = ImcNode(name);
-  //   _children[name] = child;
-  //   return child;
-  // }
-
-  Future<(ImcNode, T)> _executeChild<T>(String name, ImcContext context) async {
-    if (!_children.containsKey(name)) {
-      throw ImcException(
-        'Invalid callback ${context.path}',
-        cause: 'The handler is not registered',
-        fix: ' Try to register the handler before call it',
-      );
-    }
-    final child = _children[name]!;
-
-    T? result;
-    if (child._callback != null) {
-      result = await child._callback!(context);
-    }
-    if (result == null) {
-      throw ImcException('Cannot use null value');
-    }
-
-    return (child, result);
-  }
-
-  // Future _exec(String args, dynamic params) async {
-  //   final path = args.split(Imc.sep);
-  //   final ctx = ImcContext(args, params);
-  //   dynamic result;
-  //
-  //   ImcNode current = this;
-  //   for (final segment in path) {
-  //     (current, result) = await current._executeChild(segment, ctx);
-  //   }
-  //
-  //   return result;
-  // }
-}
-
 /// IMC (Inter-Module Communication)
 /// It permit to call methods through different modules without depending on it
 ///
@@ -194,7 +131,6 @@ class ImcNode {
 /// });
 /// ```
 class Imc {
-  final ImcNode _root = ImcNode('root');
   final Map<String, ImcContract> _contracts = {};
   bool _disposed = false;
 
@@ -337,6 +273,6 @@ class Imc {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
-    _root._children.clear();
+    // _root._children.clear();
   }
 }

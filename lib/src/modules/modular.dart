@@ -30,6 +30,7 @@
 */
 
 import 'package:flutter/cupertino.dart';
+import 'package:mosaic/src/mosaic.dart';
 import '../events/events.dart';
 import 'injector.dart';
 
@@ -109,6 +110,6 @@ abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
   @override
   void dispose() {
     super.dispose();
-    events.deafen(_extensionListener);
+    mosaic.events.deafen(_extensionListener);
   }
 }
