@@ -33,14 +33,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:mosaic/mosaic.dart';
+import 'package:mosaic/src/mosaic.dart';
 
 /// Manages all modules in the application and provides centralized control
 /// over module lifecycle, error handling, and state management.
 class ModuleManager with Loggable {
-  ModuleManager._internal();
-
-  static final _instance = ModuleManager._internal();
-
   @override
   List<String> get loggerTags => ['module_manager'];
 
@@ -134,7 +131,7 @@ class ModuleManager with Loggable {
     for (final module in sorted) {
       await activateModule(module);
     }
-    router.init(start.name);
+    mosaic.router.init(start.name);
   }
 
   /// This is an implementation of topological sort with DFS
@@ -219,7 +216,10 @@ class ModuleManager with Loggable {
     module.onActive(RouteTransitionContext(to: module));
     info('Activated module ${module.name}');
 
-    events.emit<String>('module_manager/module_activated', module.name);
+    mosaic.events.emit<String>(
+      ['module_manager', 'module_activated'].join(Events.sep),
+      module.name,
+    );
   }
 
   /// Suspends a module without disposing it.
@@ -264,6 +264,3 @@ class ModuleManager with Loggable {
     );
   }
 }
-
-/// Istanza globale del gestore dei moduli, accessibile ovunque.
-final moduleManager = ModuleManager._instance;

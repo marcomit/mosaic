@@ -33,6 +33,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mosaic/mosaic.dart';
+import 'package:mosaic/src/mosaic.dart';
 
 /// Lifecycle states for module management.
 ///
@@ -221,11 +222,10 @@ abstract class Module with Loggable {
 
     debug('Module $name: $oldState → $newState');
 
-    // Emit state change event
-    events.emit<ModuleLifecycleState>(
-      'module/$name/state_changed',
+    mosaic.events.emit<ModuleLifecycleState>(
+      ['module', name, 'state_changed'].join(Events.sep),
       newState,
-      true, // retain for late subscribers
+      true,
     );
 
     _lock.release();
@@ -428,8 +428,8 @@ abstract class Module with Loggable {
   Future<T> push<T>(Widget widget) {
     final entry = InternalRoute(Completer<T>(), widget);
     _stack.add(entry);
-    logger.info('$name PUSH ${_stack.length}', ['router']);
-    events.emit<String>(['router', 'push'].join(Events.sep), '');
+    mosaic.logger.info('$name PUSH ${_stack.length}', ['router']);
+    mosaic.events.emit<String>(['router', 'push'].join(Events.sep), '');
     return entry.completer.future;
   }
 
@@ -446,8 +446,8 @@ abstract class Module with Loggable {
   void pop<T>([T? value]) {
     if (_stack.isEmpty) return;
     final c = _stack.removeLast().completer;
-    logger.info('$name POP ${_stack.length}', ['router']);
-    events.emit<String>(['router', 'pop'].join(Events.sep), '');
+    mosaic.logger.info('$name POP ${_stack.length}', ['router']);
+    mosaic.events.emit<String>(['router', 'pop'].join(Events.sep), '');
     c.complete(value);
   }
 
@@ -458,7 +458,7 @@ abstract class Module with Loggable {
   void clear() {
     while (_stack.isNotEmpty) {
       _stack.removeLast().completer.complete(null);
-      events.emit<String>(['router', 'pop'].join(Events.sep), '');
+      mosaic.events.emit<String>(['router', 'pop'].join(Events.sep), '');
     }
   }
   // Lifecycle hooks - override these in subclasses

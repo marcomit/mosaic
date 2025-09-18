@@ -53,6 +53,18 @@ extension on Argv {
   });
 
   Argv get sync => use<ProfileService>((p) => p.sync);
+  Argv get help {
+    return flag('help', abbr: 'h').on((cli) {
+      if (cli.commands.isEmpty) return;
+      if (cli.commands.last != name) return;
+      if (!cli.flag('help')) {
+        print('Invalid command.');
+        print('  -h or --help to see the usage!');
+        return;
+      }
+      print(usage());
+    });
+  }
 }
 
 Argv setupContext(Argv app) {
@@ -96,7 +108,7 @@ void setupProjectCommands(Argv app) {
 void setupTesseraCommands(Argv app) {
   final tessera = app.command('tessera', description: 'Manage tesserae');
 
-  tessera
+  tessera.help
     ..command('add', description: 'Create a new tessera')
         .positional('name')
         .on(require('name'))
@@ -126,7 +138,9 @@ void setupTesseraCommands(Argv app) {
 }
 
 void setupDependencyCommands(Argv app) {
-  final deps = app.command('deps', description: 'Manage tessera dependencies');
+  final deps = app
+      .command('deps', description: 'Manage tessera dependencies')
+      .help;
 
   final depsAdd = deps.command('add', description: 'Add dependency to tessera');
 
@@ -152,7 +166,7 @@ void setupDependencyCommands(Argv app) {
 void setupProfileCommands(Argv app) {
   final profile = app.command('profile', description: 'Manage profiles');
 
-  profile
+  profile.help
     ..command(
       'list',
       description: 'List all profiles',
@@ -188,6 +202,10 @@ void setupProfileCommands(Argv app) {
         .validateConfig
         .use<ProfileService>((p) => p.removeTessera)
         .sync
+    ..command(
+      'sync',
+      description: 'Sync the tesserae from profile',
+    ).positional('profile').check.validateConfig.sync
     ..command('set-default', description: 'Set default tessera for profile')
         .positional('tessera')
         .positional('profile')

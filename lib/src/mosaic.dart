@@ -28,18 +28,43 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-library;
 
-export 'extensions.dart';
-export 'exceptions.dart';
-export 'src/dependency_injection/dependency_injector.dart';
-export 'src/events/exports.dart';
+import 'package:mosaic/mosaic.dart';
+import 'package:mosaic/src/dependency_injection/dependency_container.dart';
 
-export 'src/imc/imc.dart';
+class MosaicContainer with Injectable {
+  MosaicContainer._internal() {
+    put(Events());
+    put(InternalRouter());
+    put(Logger());
+    put(Imc());
+    put(ModuleManager());
+  }
 
-export 'src/logger/exports.dart';
-export 'src/modules/exports.dart';
-export 'src/routing/exports.dart';
-export 'src/signal/exports.dart';
-export 'src/thread_safety/exports.dart';
-export 'src/widgets/mosaic_app.dart';
+  Events get events => get<Events>();
+  InternalRouter get router => get<InternalRouter>();
+  Imc get imc => get<Imc>();
+  ModuleManager get registry => get<ModuleManager>();
+
+  /// Global logger instance for application-wide logging.
+  ///
+  /// This singleton provides a convenient way to access logging functionality
+  /// from anywhere in your application without dependency injection.
+  ///
+  /// **Example:**
+  /// ```dart
+  /// logger.info('Application started');
+  /// logger.error('Failed to connect to database');
+  /// ```
+  Logger get logger => get<Logger>();
+}
+
+mixin MosaicServices {
+  Events get events => mosaic.events;
+  InternalRouter get router => mosaic.router;
+  Imc get imc => mosaic.imc;
+  ModuleManager get registry => mosaic.registry;
+  Logger get logger => mosaic.logger;
+}
+
+final mosaic = MosaicContainer._internal();
