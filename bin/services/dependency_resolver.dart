@@ -44,7 +44,7 @@ class DependencyResolver {
     final ctx = cli.get<Context>();
 
     final root = await ctx.env.root();
-    final localPackages = await ctx.env.getAllPackages(root!.path);
+    final localPackages = await ctx.env.getAllPackages(root.path);
 
     await ctx.env.walk((dir) async {
       if (!ctx.env.isValidPackage(path: dir.path)) return true;
@@ -114,8 +114,6 @@ class DependencyResolver {
   Future<void> generateOverridedPackages(ArgvResult cli, Directory path) async {
     final ctx = cli.get<Context>();
     final root = await ctx.env.root();
-
-    if (root == null) return;
 
     final localPackages = await ctx.env.getAllPackages();
     final packages = await getLocalPackages(ctx, path, localPackages);

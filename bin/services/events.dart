@@ -131,7 +131,7 @@ class EventService {
     final root = await ctx.env.root();
     final events = ctx.config.get('events') ?? <String, dynamic>{};
     final name = ctx.config.get('name');
-    final path = utils.join([root!.path, name, 'lib', 'events.dart']);
+    final path = utils.join([root.path, name, 'lib', 'events.dart']);
 
     print('Generating event tree...'.dim);
     await _saveFile(path, events);

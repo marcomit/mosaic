@@ -37,9 +37,12 @@ class Environment {
   static const String packageMark = 'pubspec.yaml';
   static const String tesseraMark = 'tessera.yaml';
 
-  Future<Directory?> root([String? path]) => utils.ancestor(projectMarker);
+  Future<Directory> root([String? path]) async {
+    final res = await utils.ancestor(projectMarker);
+    return res!;
+  }
 
-  Future<bool> isValid([String? path]) async => await root(path) != null;
+  Future<bool> isValid() async => await utils.ancestor(projectMarker) != null;
 
   Future<void> walk(
     Future<bool> Function(Directory) visitor, [
