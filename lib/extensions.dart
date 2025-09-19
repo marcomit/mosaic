@@ -30,7 +30,6 @@
 */
 
 import 'package:flutter/widgets.dart';
-import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 import 'package:mosaic/src/routing/router.dart';
 import 'package:mosaic/src/signal/signal_watch.dart';
 import 'package:mosaic/src/signal/signal.dart';
@@ -41,10 +40,6 @@ extension RouteExtension on BuildContext {
 
   void go<T>(String name, [T? value]) => router.go(name, value);
   void goBack<T>([T? value]) => router.goBack(value);
-}
-
-extension DependencyExtension on BuildContext {
-  T get<T extends Object>() => global.get<T>();
 }
 
 extension SignalWatchExtension<T> on Signal<T> {

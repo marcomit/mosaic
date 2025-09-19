@@ -32,8 +32,6 @@
 import 'package:mosaic/src/logger/logger.dart';
 import '../../exceptions.dart';
 
-final global = DependencyInjector();
-
 /// A dependency injection container that manages object lifecycles and provides
 /// type-safe dependency resolution.
 ///
