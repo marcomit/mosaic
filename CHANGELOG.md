@@ -32,3 +32,6 @@
 
 ## 1.0.1
 - Fixed argument parsing for profile's commands
+
+## 1.0.2
+- Grouped singletons in all one container (also DI container)
