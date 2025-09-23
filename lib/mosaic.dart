@@ -34,12 +34,11 @@ export 'extensions.dart';
 export 'exceptions.dart';
 export 'src/dependency_injection/dependency_injector.dart';
 export 'src/events/exports.dart';
-
 export 'src/imc/imc.dart';
-
 export 'src/logger/exports.dart';
 export 'src/modules/exports.dart';
 export 'src/routing/exports.dart';
 export 'src/signal/exports.dart';
 export 'src/thread_safety/exports.dart';
 export 'src/widgets/mosaic_app.dart';
+export 'src/mosaic.dart';

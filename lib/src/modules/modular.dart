@@ -103,7 +103,7 @@ abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
 
   @override
   void initState() {
-    _extensionListener = injector.on(_topic('*'), _extensionCallback);
+    _extensionListener = mosaic.injector.on(_topic('*'), _extensionCallback);
     super.initState();
   }
 

@@ -39,12 +39,14 @@ class MosaicContainer with Injectable {
     put(Logger());
     put(Imc());
     put(ModuleManager());
+    put(UIInjector());
   }
 
   Events get events => get<Events>();
   InternalRouter get router => get<InternalRouter>();
   Imc get imc => get<Imc>();
   ModuleManager get registry => get<ModuleManager>();
+  UIInjector get injector => get<UIInjector>();
 
   /// Global logger instance for application-wide logging.
   ///

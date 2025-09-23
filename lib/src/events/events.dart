@@ -195,10 +195,10 @@ class Events {
     _deliverRetainedEvents<T>(listener, channel);
 
     _listeners.add(listener);
-    mosaic.logger.info(
-      'Registered listener for \'$channel\' (${_listeners.length} total)',
-      ['events'],
-    );
+    // mosaic.logger.info(
+    //   'Registered listener for \'$channel\' (${_listeners.length} total)',
+    //   ['events'],
+    // );
     return listener;
   }
 
@@ -302,15 +302,15 @@ class Events {
     }
 
     final path = channel.split(sep);
-    mosaic.logger.info('Emitting \'$channel\'${retain ? ' (retained)' : ''}', [
-      'events',
-    ]);
+    // mosaic.logger.info('Emitting \'$channel\'${retain ? ' (retained)' : ''}', [
+    //   'events',
+    // ]);
 
     if (retain) {
       _retained[channel] = data;
     }
 
-    int notifiedCount = 0;
+    // int notifiedCount = 0;
 
     for (final listener in _listeners) {
       if (!listener._verify(path)) continue;
@@ -329,16 +329,16 @@ class Events {
           );
         }
         listener.callback(context);
-        notifiedCount++;
+        // notifiedCount++;
       } catch (e) {
         mosaic.logger.error('Error in event listener for \'$channel\': $e', [
           'events',
         ]);
       }
     }
-    mosaic.logger.debug('Notified $notifiedCount listeners for \'$channel\'', [
-      'events',
-    ]);
+    // mosaic.logger.debug('Notified $notifiedCount listeners for \'$channel\'', [
+    //   'events',
+    // ]);
   }
 
   /// Removes a specific listener.
@@ -354,13 +354,13 @@ class Events {
   void deafen<T>(EventListener<T> listener) {
     final wasRemoved = _listeners.remove(listener);
     if (wasRemoved) {
-      mosaic.logger.info('Removed listener (${_listeners.length} remaining)', [
-        'events',
-      ]);
+      // mosaic.logger.info('Removed listener (${_listeners.length} remaining)', [
+      //   'events',
+      // ]);
     } else {
-      mosaic.logger.warning('Attempted to remove non-existent listener', [
-        'events',
-      ]);
+      // mosaic.logger.warning('Attempted to remove non-existent listener', [
+      //   'events',
+      // ]);
     }
   }
 
@@ -371,13 +371,13 @@ class Events {
   void pop() {
     if (_listeners.isNotEmpty) {
       _listeners.removeLast();
-      mosaic.logger.info('Popped listener (${_listeners.length} remaining)', [
-        'events',
-      ]);
+      // mosaic.logger.info('Popped listener (${_listeners.length} remaining)', [
+      //   'events',
+      // ]);
     } else {
-      mosaic.logger.warning('Attempted to pop from empty listener list', [
-        'events',
-      ]);
+      // mosaic.logger.warning('Attempted to pop from empty listener list', [
+      //   'events',
+      // ]);
     }
   }
 
@@ -386,16 +386,16 @@ class Events {
   /// This method is useful for cleanup during application shutdown
   /// or when resetting the event system.
   void clear() {
-    final listenerCount = _listeners.length;
-    final retainedCount = _retained.length;
+    // final listenerCount = _listeners.length;
+    // final retainedCount = _retained.length;
 
     _listeners.clear();
     _retained.clear();
 
-    mosaic.logger.info(
-      'Cleared $listenerCount listeners and $retainedCount retained events',
-      ['events'],
-    );
+    // mosaic.logger.info(
+    //   'Cleared $listenerCount listeners and $retainedCount retained events',
+    //   ['events'],
+    // );
   }
 
   /// Removes all retained events.
@@ -403,9 +403,9 @@ class Events {
   /// New listeners will not receive previously retained events after
   /// calling this method.
   void clearRetained() {
-    final count = _retained.length;
+    // final count = _retained.length;
     _retained.clear();
-    mosaic.logger.info('Cleared $count retained events', ['events']);
+    // mosaic.logger.info('Cleared $count retained events', ['events']);
   }
 
   // Returns the number of registered listeners.

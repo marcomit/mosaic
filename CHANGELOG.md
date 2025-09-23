@@ -35,3 +35,6 @@
 
 ## 1.0.2
 - Grouped singletons in all one container (also DI container)
+
+## 1.0.3
+- Added mosaic service mixin

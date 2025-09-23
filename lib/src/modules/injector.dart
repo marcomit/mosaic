@@ -38,8 +38,6 @@ typedef UIInjectorCallback = EventCallback<ModularExtension>;
 typedef UIInjectorListener = EventListener<ModularExtension>;
 
 class UIInjector {
-  UIInjector._internal();
-  static final _instance = UIInjector._internal();
   void inject(String path, ModularExtension extension, [Object? watcher]) {
     watcher ??= Object();
     final channel = [path, identityHashCode(watcher)];
@@ -54,5 +52,3 @@ class UIInjector {
     return mosaic.events.on(path, callback);
   }
 }
-
-final injector = UIInjector._instance;

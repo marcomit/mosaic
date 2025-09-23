@@ -31,7 +31,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:mosaic/mosaic.dart';
 import 'package:mosaic/src/mosaic.dart';
 
@@ -41,9 +40,6 @@ class ModuleManager with Loggable {
   @override
   List<String> get loggerTags => ['module_manager'];
 
-  /// Map of all registered modules indexed by name.
-  // final Map<String, Module> _modules = {};
-
   Module? _defaultModule;
 
   /// Name of the currently active module.
@@ -52,7 +48,14 @@ class ModuleManager with Loggable {
   String? get currentModule => _currentModule;
 
   set currentModule(String? module) {
-    debugPrint('Nuovo modulo corrente $module');
+    if (!_modules.containsKey(module)) {
+      throw ModuleException(
+        'Invalid current module',
+        cause:
+            'Trying to set the current module to $module but it is not registered',
+        fix: 'Try to register or recover it',
+      );
+    }
     _currentModule = module;
   }
 
