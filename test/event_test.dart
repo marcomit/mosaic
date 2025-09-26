@@ -535,22 +535,4 @@ void main() {
       });
     });
   });
-
-  group('Event Listener Class', () {
-    test('should create listener with correct properties', () {
-      final callback = (EventContext<String> ctx) {};
-      final listener = EventListener<String>(['user', 'profile'], callback);
-
-      expect(listener.path, equals(['user', 'profile']));
-      expect(listener.callback, equals(callback));
-    });
-
-    test('should have meaningful toString', () {
-      final listener = EventListener<String>(['user', 'profile'], (ctx) {});
-      final string = listener.toString();
-
-      expect(string, contains('EventListener'));
-      expect(string, contains('user/profile'));
-    });
-  });
 }

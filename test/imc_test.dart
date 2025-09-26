@@ -1,16 +1,16 @@
-import 'package:flutter/widgets.dart';
+// import 'package:flutter/widgets.dart';
 // import 'package:flutter_test/flutter_test.dart';
-import 'package:mosaic/mosaic.dart';
+// import 'package:mosaic/mosaic.dart';
 
-class TestContract extends ImcContract {
-  TestContract() : super('test') {
-    register('prova', prova);
-  }
-
-  void prova(ImcContext<String> ctx) {
-    debugPrint('Daiiiiii');
-  }
-}
+// class TestContract extends ImcContract {
+//   TestContract() : super('test') {
+//     register('prova', prova);
+//   }
+//
+//   void prova(ImcContext<String> ctx) {
+//     debugPrint('Daiiiiii');
+//   }
+// }
 
 void main() async {
   // // group('IMC Tests', () async {

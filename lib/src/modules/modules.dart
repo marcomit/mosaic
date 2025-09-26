@@ -33,7 +33,6 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mosaic/mosaic.dart';
-import 'package:mosaic/src/mosaic.dart';
 
 /// Lifecycle states for module management.
 ///

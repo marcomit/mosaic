@@ -102,7 +102,22 @@ void setupProjectCommands(Argv app) {
     ..command(
       'status',
       description: 'Show project status and current profile',
-    ).check.use<MosaicService>((m) => m.status);
+    ).check.use<MosaicService>((m) => m.status)
+    ..command('walk', description: 'Runs the command in all modules')
+        .positional('command')
+        .option(
+          'resolution',
+          abbr: 'r',
+          description: 'global',
+          allowed: ['global', 'profile', 'tesserae'],
+        )
+        .flag(
+          'output',
+          abbr: 'o',
+          description: 'Show the output of the command',
+        )
+        .check
+        .use<MosaicService>((m) => m.walk);
 }
 
 void setupTesseraCommands(Argv app) {

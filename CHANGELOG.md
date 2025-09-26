@@ -38,3 +38,7 @@
 
 ## 1.0.3
 - Added mosaic service mixin
+
+## 1.0.4
+- Added walk command in the CLI
+- Deleted debug print

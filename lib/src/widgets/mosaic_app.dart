@@ -32,7 +32,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:mosaic/mosaic.dart';
-import 'package:mosaic/src/mosaic.dart';
 
 class MosaicScope extends StatefulWidget {
   const MosaicScope({super.key});

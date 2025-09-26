@@ -32,7 +32,6 @@
 import 'dart:async';
 
 import 'package:mosaic/mosaic.dart';
-import 'package:mosaic/src/mosaic.dart';
 
 /// Manages all modules in the application and provides centralized control
 /// over module lifecycle, error handling, and state management.
@@ -82,8 +81,6 @@ class ModuleManager with Loggable {
         'Current module does not set! Consider setting it before!',
       );
     }
-    print(_modules);
-    print(currentModule);
     if (!_modules.containsKey(currentModule)) {
       throw RouterException('Current module does not exists');
     }

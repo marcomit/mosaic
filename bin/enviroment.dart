@@ -31,6 +31,7 @@
 
 import 'dart:io';
 import 'utils/utils.dart';
+import 'utils/gesso.dart';
 
 class Environment {
   static const String projectMarker = 'mosaic.yaml';
@@ -52,10 +53,18 @@ class Environment {
     }, path: path);
   }
 
-  Future<void> walkCmd(List<String> cmd, [String? path]) async {
+  Future<void> walkCmd(
+    List<String> cmd, {
+    String? path,
+    bool out = false,
+  }) async {
     return walk((d) async {
       if (isValidPackage(path: d.path)) {
-        return _command(cmd, d);
+        if (out) print('');
+        if (out) print('');
+        print(utils.last(d.path).bold.green);
+        if (out) print('');
+        return _command(cmd, d, out);
       }
       return true;
     }, path);
@@ -94,8 +103,8 @@ class Environment {
     return false;
   }
 
-  Future<bool> _command(List<String> cmd, Directory curr) async {
-    await utils.cmd(cmd, path: curr.path);
+  Future<bool> _command(List<String> cmd, Directory curr, bool out) async {
+    await utils.cmd(cmd, path: curr.path, out: out);
     return isValidPackage(path: curr.path);
   }
 

@@ -33,7 +33,6 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:mosaic/mosaic.dart';
-import 'package:mosaic/src/mosaic.dart';
 
 class InternalRouter with Loggable {
   @override
