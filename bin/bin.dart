@@ -103,12 +103,23 @@ void setupProjectCommands(Argv app) {
       'status',
       description: 'Show project status and current profile',
     ).check.use<MosaicService>((m) => m.status)
+    ..command(
+      'tidy',
+      description: 'Runs \'flutter pub get\' in all packages',
+    ).option(
+      'resolution',
+      abbr: 'r',
+      description: 'Filters packages',
+      defaultValue: 'global',
+      allowed: ['global', 'profile', 'tesserae'],
+    )
     ..command('walk', description: 'Runs the command in all modules')
         .positional('command')
         .option(
           'resolution',
           abbr: 'r',
-          description: 'global',
+          description: 'Filters packages',
+          defaultValue: 'global',
           allowed: ['global', 'profile', 'tesserae'],
         )
         .flag(
