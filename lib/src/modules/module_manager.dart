@@ -31,21 +31,13 @@
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:mosaic/mosaic.dart';
 
 /// Manages all modules in the application and provides centralized control
 /// over module lifecycle, error handling, and state management.
 class ModuleManager with Loggable {
-  ModuleManager._internal();
-
-  static final _instance = ModuleManager._internal();
-
   @override
   List<String> get loggerTags => ['module_manager'];
-
-  /// Map of all registered modules indexed by name.
-  // final Map<String, Module> _modules = {};
 
   Module? _defaultModule;
 
@@ -55,7 +47,14 @@ class ModuleManager with Loggable {
   String? get currentModule => _currentModule;
 
   set currentModule(String? module) {
-    debugPrint('Nuovo modulo corrente $module');
+    if (!_modules.containsKey(module)) {
+      throw ModuleException(
+        'Invalid current module',
+        cause:
+            'Trying to set the current module to $module but it is not registered',
+        fix: 'Try to register or recover it',
+      );
+    }
     _currentModule = module;
   }
 
@@ -82,8 +81,6 @@ class ModuleManager with Loggable {
         'Current module does not set! Consider setting it before!',
       );
     }
-    print(_modules);
-    print(currentModule);
     if (!_modules.containsKey(currentModule)) {
       throw RouterException('Current module does not exists');
     }
@@ -134,7 +131,7 @@ class ModuleManager with Loggable {
     for (final module in sorted) {
       await activateModule(module);
     }
-    router.init(start.name);
+    mosaic.router.init(start.name);
   }
 
   /// This is an implementation of topological sort with DFS
@@ -219,7 +216,10 @@ class ModuleManager with Loggable {
     module.onActive(RouteTransitionContext(to: module));
     info('Activated module ${module.name}');
 
-    events.emit<String>('module_manager/module_activated', module.name);
+    mosaic.events.emit<String>(
+      ['module_manager', 'module_activated'].join(mosaic.events.sep),
+      module.name,
+    );
   }
 
   /// Suspends a module without disposing it.
@@ -264,6 +264,3 @@ class ModuleManager with Loggable {
     );
   }
 }
-
-/// Istanza globale del gestore dei moduli, accessibile ovunque.
-final moduleManager = ModuleManager._instance;

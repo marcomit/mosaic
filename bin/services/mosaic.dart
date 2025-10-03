@@ -137,7 +137,7 @@ class MosaicService {
     print('');
     print('Next steps:'.bold.cyan);
     print('  cd $name'.dim);
-    print('  mosaic add <tessera-name>'.cyan);
+    print('  mosaic tessera add <tessera-name>'.cyan);
   }
 
   Future<void> walk(ArgvResult cli) async {
@@ -148,7 +148,8 @@ class MosaicService {
 
     print('');
 
-    env.walkCmd(command.split(' '));
+    await env.walkCmd(utils.parseCommand(command), out: cli.flag('output'));
+    print('');
     print('✓ Command executed across tesserae'.green);
   }
 

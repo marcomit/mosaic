@@ -30,6 +30,7 @@
 */
 
 import 'package:flutter/cupertino.dart';
+import 'package:mosaic/src/mosaic.dart';
 import '../events/events.dart';
 import 'injector.dart';
 
@@ -78,7 +79,7 @@ abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
 
   /// Get the string for listening events
   String _topic(String action) {
-    return [..._baseTopic, action].join(Events.sep);
+    return [..._baseTopic, action].join(mosaic.events.sep);
   }
 
   /// Constructor (only need to define a static string [id])
@@ -102,13 +103,13 @@ abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
 
   @override
   void initState() {
-    _extensionListener = injector.on(_topic('*'), _extensionCallback);
+    _extensionListener = mosaic.injector.on(_topic('*'), _extensionCallback);
     super.initState();
   }
 
   @override
   void dispose() {
     super.dispose();
-    events.deafen(_extensionListener);
+    mosaic.events.deafen(_extensionListener);
   }
 }

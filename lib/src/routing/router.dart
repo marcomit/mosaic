@@ -35,9 +35,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:mosaic/mosaic.dart';
 
 class InternalRouter with Loggable {
-  InternalRouter._internal();
-  static final _instance = InternalRouter._internal();
-
   @override
   List<String> get loggerTags => ['router'];
 
@@ -54,7 +51,7 @@ class InternalRouter with Loggable {
   /// and the [push] call will be completed
   List<RouteHistoryEntry> get history => List.unmodifiable(_history);
 
-  Module get _current => moduleManager.current;
+  Module get _current => mosaic.registry.current;
 
   /// Returns the current module
   ///
@@ -77,7 +74,7 @@ class InternalRouter with Loggable {
   /// This function should be called during module initialization
   void init(String defaultModule) {
     final entry = RouteHistoryEntry(defaultModule);
-    router._history.add(entry);
+    mosaic.router._history.add(entry);
   }
 
   /// Push a widget into the current module
@@ -142,7 +139,7 @@ class InternalRouter with Loggable {
   void _goto<T>({Module? from, T? params}) {
     if (_history.isEmpty) return;
     final module = _history.last.module;
-    if (!moduleManager.activeModules.containsKey(module)) return;
+    if (!mosaic.registry.activeModules.containsKey(module)) return;
 
     info('current module ${_history.last.module}');
 
@@ -152,22 +149,22 @@ class InternalRouter with Loggable {
 
     final ctx = RouteTransitionContext(from: from, to: to, params: params);
 
-    moduleManager.currentModule = _history.last.module;
-    events.emit<RouteTransitionContext>(
-      ['router', 'change', module].join(Events.sep),
+    mosaic.registry.currentModule = _history.last.module;
+    mosaic.events.emit<RouteTransitionContext>(
+      ['router', 'change', module].join(mosaic.events.sep),
       ctx,
     );
   }
 
   Module _tryGetModule(String m) {
-    if (!moduleManager.activeModules.containsKey(m)) {
+    if (!mosaic.registry.activeModules.containsKey(m)) {
       throw RouterException(
         'Module $m not registered or not active.',
         cause: 'Bad initialization or deactivated by configuration',
         fix: 'try to activate the module $m',
       );
     }
-    return moduleManager.activeModules[m]!;
+    return mosaic.registry.activeModules[m]!;
   }
 
   void _checkDisposed() {
@@ -228,5 +225,3 @@ class InternalRouter with Loggable {
     _navigation.release();
   }
 }
-
-final router = InternalRouter._instance;

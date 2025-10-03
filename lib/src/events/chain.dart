@@ -29,6 +29,8 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 import 'dart:async';
+import 'package:mosaic/src/mosaic.dart';
+
 import 'events.dart';
 
 /// Base class for building event topic paths with chaining support.
@@ -63,7 +65,7 @@ abstract class Segment {
   /// segment.$('profile').$('update'); // Results in 'user/profile/update'
   /// ```
   Segment $(String data) {
-    if (topic.isNotEmpty) topic += Events.sep;
+    if (topic.isNotEmpty) topic += mosaic.events.sep;
     topic += data;
     return this;
   }
@@ -79,7 +81,7 @@ abstract class Segment {
   /// segment.$('user').$('login').emit<String>('user123');
   /// ```
   void emit<T>([T? data, bool retain = false]) =>
-      events.emit<T>(topic, data, retain);
+      mosaic.events.emit<T>(topic, data, retain);
 
   /// Registers a listener for events on the current topic path.
   ///
@@ -95,7 +97,7 @@ abstract class Segment {
   /// events.deafen(listener);
   /// ```
   EventListener<T> on<T>(EventCallback<T> callback) =>
-      events.on<T>(topic, callback);
+      mosaic.events.on<T>(topic, callback);
 
   /// Waits for a single event on the current topic path.
   ///
@@ -119,7 +121,7 @@ abstract class Segment {
       try {
         callback(ctx);
       } finally {
-        events.deafen(listener);
+        mosaic.events.deafen(listener);
         if (!completer.isCompleted) {
           completer.complete();
         }
@@ -144,7 +146,7 @@ abstract class Segment {
 
     late EventListener<T> listener;
     listener = on<T>((ctx) {
-      events.deafen(listener);
+      mosaic.events.deafen(listener);
       if (!completer.isCompleted) {
         completer.complete(ctx.data);
       }
@@ -218,7 +220,7 @@ mixin Param on Segment {
   /// segment.params(['api', 'v1', 'users']); // 'base/api/v1/users'
   /// ```
   Segment params(List<String> params) {
-    topic = [topic, ...params].join(Events.sep);
+    topic = [topic, ...params].join(mosaic.events.sep);
     return this;
   }
 }

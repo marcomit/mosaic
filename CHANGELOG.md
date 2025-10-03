@@ -29,3 +29,16 @@
 
 ## 1.0.0
 - Introducing profiles configuration
+
+## 1.0.1
+- Fixed argument parsing for profile's commands
+
+## 1.0.2
+- Grouped singletons in all one container (also DI container)
+
+## 1.0.3
+- Added mosaic service mixin
+
+## 1.0.4
+- Added walk command in the CLI
+- Deleted debug print

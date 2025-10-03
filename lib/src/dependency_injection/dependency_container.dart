@@ -28,17 +28,20 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-library;
 
-export 'extensions.dart';
-export 'exceptions.dart';
-export 'src/dependency_injection/dependency_injector.dart';
-export 'src/events/exports.dart';
-export 'src/imc/imc.dart';
-export 'src/logger/exports.dart';
-export 'src/modules/exports.dart';
-export 'src/routing/exports.dart';
-export 'src/signal/exports.dart';
-export 'src/thread_safety/exports.dart';
-export 'src/widgets/mosaic_app.dart';
-export 'src/mosaic.dart';
+import 'package:mosaic/mosaic.dart';
+
+mixin Injectable {
+  final _di = DependencyInjector();
+
+  T call<T extends Object>() => _di<T>();
+  T get<T extends Object>() => _di<T>();
+  void put<T extends Object>(T instance) => _di.put(instance);
+  void factory<T extends Object>(T Function() builder) => _di.factory(builder);
+  void lazy<T extends Object>(T Function() builder) => _di.put(builder);
+  void override<T extends Object>(T instance) => _di.override(instance);
+  bool contains<T extends Object>() => _di.contains<T>();
+
+  void clear() => _di.clear();
+  void remove<T>() => _di.remove();
+}

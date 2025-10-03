@@ -29,7 +29,7 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-import 'package:mosaic/src/logger/logger.dart';
+import 'package:mosaic/src/mosaic.dart';
 import '../../exceptions.dart';
 
 /// A dependency injection container that manages object lifecycles and provides
@@ -254,9 +254,10 @@ class DependencyInjector {
     res |= _removeIfPresent<T>(_cached);
     res |= _removeIfPresent<T>(_instances);
     if (!res) {
-      logger.warning('Trying to remove $T but is not a registered dependency', [
-        'dependency',
-      ]);
+      mosaic.logger.warning(
+        'Trying to remove $T but is not a registered dependency',
+        ['dependency'],
+      );
     }
   }
 

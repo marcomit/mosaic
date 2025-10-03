@@ -33,8 +33,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:mosaic/exceptions.dart';
-
-import '../logger/logger.dart';
+import 'package:mosaic/src/mosaic.dart';
 
 /// Contains information passed to a listener when an event is emitted.
 ///
@@ -158,8 +157,10 @@ typedef EventCallback<T> = void Function(EventContext<T>);
 /// events.deafen(listener);
 /// ```
 class Events {
+  Events([this.sep = '/']);
+
   /// Segment separator for channels (default: `/`).
-  static String sep = '/';
+  String sep;
 
   final List<EventListener> _listeners = [];
 
@@ -194,10 +195,10 @@ class Events {
     _deliverRetainedEvents<T>(listener, channel);
 
     _listeners.add(listener);
-    logger.info(
-      'Registered listener for \'$channel\' (${_listeners.length} total)',
-      ['events'],
-    );
+    // mosaic.logger.info(
+    //   'Registered listener for \'$channel\' (${_listeners.length} total)',
+    //   ['events'],
+    // );
     return listener;
   }
 
@@ -264,7 +265,7 @@ class Events {
 
         listener.callback(context);
       } catch (e) {
-        logger.error(
+        mosaic.logger.error(
           'Error delivering retained event \'$route\' to listener: $e',
           ['events'],
         );
@@ -294,20 +295,22 @@ class Events {
   /// ```
   void emit<T>(String channel, [T? data, bool retain = false]) {
     if (channel.isEmpty) {
-      logger.warning('Attempted to emit event on empty channel', ['events']);
+      mosaic.logger.warning('Attempted to emit event on empty channel', [
+        'events',
+      ]);
       return;
     }
 
     final path = channel.split(sep);
-    logger.info('Emitting \'$channel\'${retain ? ' (retained)' : ''}', [
-      'events',
-    ]);
+    // mosaic.logger.info('Emitting \'$channel\'${retain ? ' (retained)' : ''}', [
+    //   'events',
+    // ]);
 
     if (retain) {
       _retained[channel] = data;
     }
 
-    int notifiedCount = 0;
+    // int notifiedCount = 0;
 
     for (final listener in _listeners) {
       if (!listener._verify(path)) continue;
@@ -326,16 +329,16 @@ class Events {
           );
         }
         listener.callback(context);
-        notifiedCount++;
+        // notifiedCount++;
       } catch (e) {
-        logger.error('Error in event listener for \'$channel\': $e', [
+        mosaic.logger.error('Error in event listener for \'$channel\': $e', [
           'events',
         ]);
       }
     }
-    logger.debug('Notified $notifiedCount listeners for \'$channel\'', [
-      'events',
-    ]);
+    // mosaic.logger.debug('Notified $notifiedCount listeners for \'$channel\'', [
+    //   'events',
+    // ]);
   }
 
   /// Removes a specific listener.
@@ -351,11 +354,13 @@ class Events {
   void deafen<T>(EventListener<T> listener) {
     final wasRemoved = _listeners.remove(listener);
     if (wasRemoved) {
-      logger.info('Removed listener (${_listeners.length} remaining)', [
-        'events',
-      ]);
+      // mosaic.logger.info('Removed listener (${_listeners.length} remaining)', [
+      //   'events',
+      // ]);
     } else {
-      logger.warning('Attempted to remove non-existent listener', ['events']);
+      // mosaic.logger.warning('Attempted to remove non-existent listener', [
+      //   'events',
+      // ]);
     }
   }
 
@@ -366,11 +371,13 @@ class Events {
   void pop() {
     if (_listeners.isNotEmpty) {
       _listeners.removeLast();
-      logger.info('Popped listener (${_listeners.length} remaining)', [
-        'events',
-      ]);
+      // mosaic.logger.info('Popped listener (${_listeners.length} remaining)', [
+      //   'events',
+      // ]);
     } else {
-      logger.warning('Attempted to pop from empty listener list', ['events']);
+      // mosaic.logger.warning('Attempted to pop from empty listener list', [
+      //   'events',
+      // ]);
     }
   }
 
@@ -379,16 +386,16 @@ class Events {
   /// This method is useful for cleanup during application shutdown
   /// or when resetting the event system.
   void clear() {
-    final listenerCount = _listeners.length;
-    final retainedCount = _retained.length;
+    // final listenerCount = _listeners.length;
+    // final retainedCount = _retained.length;
 
     _listeners.clear();
     _retained.clear();
 
-    logger.info(
-      'Cleared $listenerCount listeners and $retainedCount retained events',
-      ['events'],
-    );
+    // mosaic.logger.info(
+    //   'Cleared $listenerCount listeners and $retainedCount retained events',
+    //   ['events'],
+    // );
   }
 
   /// Removes all retained events.
@@ -396,9 +403,9 @@ class Events {
   /// New listeners will not receive previously retained events after
   /// calling this method.
   void clearRetained() {
-    final count = _retained.length;
+    // final count = _retained.length;
     _retained.clear();
-    logger.info('Cleared $count retained events', ['events']);
+    // mosaic.logger.info('Cleared $count retained events', ['events']);
   }
 
   // Returns the number of registered listeners.
@@ -414,6 +421,3 @@ class Events {
   String toString() =>
       'Events(listeners: ${_listeners.length}, retained: ${_retained.length})';
 }
-
-/// Global event manager instance.
-final events = Events();

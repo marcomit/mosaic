@@ -40,18 +40,19 @@ class MosaicScope extends StatefulWidget {
   State<MosaicScope> createState() => _MosaicScopeState();
 }
 
-class _MosaicScopeState extends State<MosaicScope> with Admissible {
+class _MosaicScopeState extends State<MosaicScope>
+    with Admissible, MosaicServices {
   int _currentIndex = -1;
   List<Widget> modules = [];
-  String? get _currentModule => moduleManager.currentModule;
+  String? get _currentModule => registry.currentModule;
 
   set _currentModule(String? value) {
-    moduleManager.currentModule = value;
+    registry.currentModule = value;
   }
 
   void _triggerListener(RouteTransitionContext ctx) {
     if (_currentModule == null) return;
-    final module = moduleManager.activeModules[_currentModule];
+    final module = registry.activeModules[_currentModule];
     if (module == null) return;
     module.onActive(ctx);
   }
@@ -60,14 +61,14 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
   void initState() {
     super.initState();
 
-    _currentModule = moduleManager.defaultModule?.name;
+    _currentModule = registry.defaultModule?.name;
     _setIndex();
 
     on<String>('router/push', _refresh);
     on<String>('router/pop', _refresh);
     on<RouteTransitionContext>('router/change/*', _changeRoute);
 
-    for (final module in moduleManager.activeModules.values) {
+    for (final module in registry.activeModules.values) {
       modules.add(module.build(context));
     }
   }
@@ -75,7 +76,7 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
   @override
   void reassemble() async {
     super.reassemble();
-    for (final module in moduleManager.activeModules.values) {
+    for (final module in registry.activeModules.values) {
       await module.hotReload(module);
     }
   }
@@ -98,7 +99,7 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
   }
 
   void _setIndex() {
-    final keys = moduleManager.activeModules.keys;
+    final keys = registry.activeModules.keys;
     for (int i = 0; i < keys.length; i++) {
       if (_currentModule == keys.elementAt(i)) {
         _currentIndex = i;
@@ -108,7 +109,7 @@ class _MosaicScopeState extends State<MosaicScope> with Admissible {
 
   @override
   Widget build(BuildContext context) {
-    final listModules = moduleManager.activeModules.values.toList();
+    final listModules = registry.activeModules.values.toList();
 
     return Scaffold(
       body: IndexedStack(

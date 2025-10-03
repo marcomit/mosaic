@@ -29,6 +29,8 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+import 'package:mosaic/src/mosaic.dart';
+
 import '../events/events.dart';
 import 'modular.dart';
 
@@ -36,18 +38,17 @@ typedef UIInjectorCallback = EventCallback<ModularExtension>;
 typedef UIInjectorListener = EventListener<ModularExtension>;
 
 class UIInjector {
-  UIInjector._internal();
-  static final _instance = UIInjector._internal();
   void inject(String path, ModularExtension extension, [Object? watcher]) {
     watcher ??= Object();
     final channel = [path, identityHashCode(watcher)];
-    events.emit<ModularExtension>(channel.join(Events.sep), extension, true);
-    // events.extensions.params(topic).emit<ModularExtension>(extension, true);
+    mosaic.events.emit<ModularExtension>(
+      channel.join(mosaic.events.sep),
+      extension,
+      true,
+    );
   }
 
   EventListener<ModularExtension> on(String path, UIInjectorCallback callback) {
-    return events.on(path, callback);
+    return mosaic.events.on(path, callback);
   }
 }
-
-final injector = UIInjector._instance;

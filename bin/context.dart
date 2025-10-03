@@ -122,7 +122,7 @@ ${lines.map((l) => '// $l').join('\n')}
       buf.writeln(tessera.generateInitialization());
     }
 
-    buf.writeln('  await moduleManager.initialize($defaultTessera.module, [');
+    buf.writeln('  await mosaic.registry.initialize($defaultTessera.module, [');
 
     sorted.where((t) => t.active).forEach((t) {
       buf.writeln('    ${t.name}.module,');

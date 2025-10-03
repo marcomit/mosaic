@@ -32,6 +32,9 @@
 import 'dart:async';
 
 import 'package:mosaic/exceptions.dart';
+import 'package:mosaic/mosaic.dart';
+
+// import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
 
 typedef ImcCallback = FutureOr<dynamic> Function(ImcContext);
 

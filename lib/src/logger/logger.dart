@@ -34,7 +34,7 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:mosaic/exceptions.dart';
-import 'package:mosaic/src/modules/module_manager.dart';
+import 'package:mosaic/src/mosaic.dart';
 import 'package:mosaic/utils/rate_limiter.dart';
 
 import 'logger_dispatcher.dart';
@@ -136,18 +136,6 @@ enum LogLevel {
   /// ```
   bool shouldLog(LogLevel other) => value <= other.value;
 }
-
-/// Global logger instance for application-wide logging.
-///
-/// This singleton provides a convenient way to access logging functionality
-/// from anywhere in your application without dependency injection.
-///
-/// **Example:**
-/// ```dart
-/// logger.info('Application started');
-/// logger.error('Failed to connect to database');
-/// ```
-final logger = Logger();
 
 /// A production-ready logging system with advanced features.
 ///
@@ -338,7 +326,7 @@ class Logger {
   ///
   /// **Returns:** The message with module name prefix added
   static String addCurrentModule(String message, LogLevel type) {
-    return '${moduleManager.current.name} $message';
+    return '${mosaic.registry.current.name} $message';
   }
 
   /// Creates a copy of this logger with additional default tags.
@@ -997,7 +985,11 @@ mixin Loggable {
     LogType type = LogType.info,
     List<String> tags = const [],
   }) async {
-    await logger.log(message, type: type, tags: [...loggerTags, ...tags]);
+    await mosaic.logger.log(
+      message,
+      type: type,
+      tags: [...loggerTags, ...tags],
+    );
   }
 
   /// Logs a debug message with automatic tag merging.

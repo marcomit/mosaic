@@ -194,18 +194,58 @@ class Utils {
   }
 
   List<String> parseCommand(String command) {
-    final trimmed = command.trim();
-    if (trimmed.isEmpty) return [];
+    final List<String> args = [];
+    final StringBuffer currentArg = StringBuffer();
 
-    final spaceIndex = trimmed.indexOf(' ');
-    if (spaceIndex == -1) {
-      return [trimmed];
+    bool inSingleQuote = false;
+    bool inDoubleQuote = false;
+    bool escaped = false;
+
+    for (int i = 0; i < command.length; i++) {
+      final char = command[i];
+
+      if (escaped) {
+        currentArg.write(char);
+        escaped = false;
+        continue;
+      }
+
+      if (char == '\\' && !inSingleQuote) {
+        escaped = true;
+        continue;
+      }
+
+      if (char == "'" && !inDoubleQuote) {
+        inSingleQuote = !inSingleQuote;
+        continue;
+      }
+
+      if (char == '"' && !inSingleQuote) {
+        inDoubleQuote = !inDoubleQuote;
+        continue;
+      }
+
+      if (char == ' ' && !inSingleQuote && !inDoubleQuote) {
+        if (currentArg.isNotEmpty) {
+          args.add(currentArg.toString());
+          currentArg.clear();
+        }
+        continue;
+      }
+
+      currentArg.write(char);
     }
 
-    final executable = trimmed.substring(0, spaceIndex);
-    final args = trimmed.substring(spaceIndex + 1).trim();
+    if (currentArg.isNotEmpty) {
+      args.add(currentArg.toString());
+    }
 
-    return args.isEmpty ? [executable] : [executable, args];
+    final arguments = args
+        .where((arg) => arg.isNotEmpty)
+        .map((arg) => arg.trim())
+        .toList();
+
+    return arguments;
   }
 }
 
