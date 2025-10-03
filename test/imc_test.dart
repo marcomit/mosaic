@@ -1,378 +1,319 @@
-// import 'package:flutter/widgets.dart';
-// import 'package:flutter_test/flutter_test.dart';
-// import 'package:mosaic/mosaic.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mosaic/mosaic.dart';
 
-// class TestContract extends ImcContract {
-//   TestContract() : super('test') {
-//     register('prova', prova);
-//   }
-//
-//   void prova(ImcContext<String> ctx) {
-//     debugPrint('Daiiiiii');
-//   }
-// }
+void main() {
+  late Imc imc;
 
-void main() async {
-  // // group('IMC Tests', () async {
-  // late Imc imc;
-  //
-  // // setUp(() {
-  // imc = Imc();
-  // // });
-  //
-  // tearDown(() {
-  //   imc.dispose();
-  // });
-  //
-  // // group('Registration Tests', () {
-  // //   test('should register a simple callback successfully', () {
-  // //     expect(() {
-  // imc.handshake(TestContract());
-  //
-  // print('Prima');
-  // final result = await imc('test.prova');
-  // print(result);
-  //
-  // //   }, returnsNormally);
-  // // });
-  //
-  // // test('should register nested paths successfully', () {
-  // //   expect(() {
-  // //     imc.register<void, void>('module.submodule.action', (ctx) {});
-  // //   }, returnsNormally);
-  // // });
-  // //
-  // // test('should register middleware callbacks', () {
-  // //   expect(() {
-  // //     imc.register<void, String>('user', (ctx) {
-  // //       // Middleware logic
-  // //     });
-  // //     imc.register<String, String>('user.getById', (ctx) {
-  // //       return 'User: ${ctx.params}';
-  // //     });
-  // //   }, returnsNormally);
-  // // });
-  // //
-  // // test('should allow multiple callbacks on same path prefix', () {
-  // //   expect(() {
-  // //     imc.register<void, void>('auth', (ctx) {});
-  // //     imc.register<bool, String>('auth.login', (ctx) => true);
-  // //     imc.register<void, void>('auth.logout', (ctx) {});
-  // //   }, returnsNormally);
-  // // });
-  // // });
-  //
-  // // group('Execution Tests', () {
-  // //   test('should execute simple callback successfully', () async {
-  // //     String? result;
-  // //     imc.register<String, String>('user.getById', (ctx) {
-  // //       return 'User: ${ctx.params}';
-  // //     });
-  // //
-  // //     result = await imc.call<String, String>('user.getById', 'user123');
-  // //     expect(result, equals('User: user123'));
-  // //   });
-  // //
-  // //   test('should execute async callback successfully', () async {
-  // //     imc.register<String, String>('user.getById', (ctx) async {
-  // //       await Future.delayed(Duration(milliseconds: 10));
-  // //       return 'User: ${ctx.params}';
-  // //     });
-  // //
-  // //     final result = await imc.call<String, String>(
-  // //       'user.getById',
-  // //       'user123',
-  // //     );
-  // //     expect(result, equals('User: user123'));
-  // //   });
-  // //
-  // //   test('should execute middleware chain correctly', () async {
-  // //     final executionOrder = <String>[];
-  // //
-  // //     imc.register<void, String>('user', (ctx) {
-  // //       executionOrder.add('middleware');
-  // //     });
-  // //
-  // //     imc.register<String, String>('user.getById', (ctx) {
-  // //       executionOrder.add('action');
-  // //       return 'User: ${ctx.params}';
-  // //     });
-  // //
-  // //     await imc.call<String, String>('user.getById', 'user123');
-  // //     expect(executionOrder, equals(['middleware', 'action']));
-  // //   });
-  // //
-  // //   test('should execute multiple middleware levels', () async {
-  // //     final executionOrder = <String>[];
-  // //
-  // //     imc.register<void, String>('auth', (ctx) {
-  // //       executionOrder.add('auth-middleware');
-  // //     });
-  // //
-  // //     imc.register<void, String>('auth.user', (ctx) {
-  // //       executionOrder.add('user-middleware');
-  // //     });
-  // //
-  // //     imc.register<String, String>('auth.user.getById', (ctx) {
-  // //       executionOrder.add('action');
-  // //       return 'User: ${ctx.params}';
-  // //     });
-  // //
-  // //     await imc.call<String, String>('auth.user.getById', 'user123');
-  // //     expect(
-  // //       executionOrder,
-  // //       equals(['auth-middleware', 'user-middleware', 'action']),
-  // //     );
-  // //   });
-  // //
-  // //   test('should throw ImcException for unregistered path', () async {
-  // //     expect(
-  // //       () async =>
-  // //           await imc.call<String, String>('nonexistent.action', 'params'),
-  // //       throwsA(isA<ImcException>()),
-  // //     );
-  // //   });
-  // //
-  // //   test('should handle null params correctly', () async {
-  // //     imc.register<String, String?>('user.getDefault', (ctx) {
-  // //       return ctx.params == null ? 'Default User' : 'User: ${ctx.params}';
-  // //     });
-  // //
-  // //     final result = await imc.call<String, String?>('user.getDefault', null);
-  // //     expect(result, equals('Default User'));
-  // //   });
-  // //
-  // //   test('should handle complex object params', () async {
-  // //     final testUser = TestUser('John', 25);
-  // //
-  // //     imc.register<String, TestUser>('user.create', (ctx) {
-  // //       return 'Created: ${ctx.params.name} (${ctx.params.age})';
-  // //     });
-  // //
-  // //     final result = await imc.call<String, TestUser>(
-  // //       'user.create',
-  // //       testUser,
-  // //     );
-  // //     expect(result, equals('Created: John (25)'));
-  // //   });
-  // // });
-  //
-  // // group('ImcContext Tests', () {
-  // //   test('should provide correct params in context', () async {
-  // //     String? receivedParams;
-  // //     String? receivedPath;
-  // //
-  // //     imc.register<void, String>('test.action', (ctx) {
-  // //       receivedParams = ctx.params;
-  // //       receivedPath = ctx.path;
-  // //     });
-  // //
-  // //     await imc.call<void, String>('test.action', 'test-params');
-  // //
-  // //     expect(receivedParams, equals('test-params'));
-  // //     expect(receivedPath, equals('test.action'));
-  // //   });
-  // //
-  // //   test('should provide dependency injector in context', () async {
-  // //     DependencyInjector? receivedDI;
-  // //
-  // //     imc.register<void, void>('test.action', (ctx) {
-  // //       receivedDI = ctx.di;
-  // //     });
-  // //
-  // //     await imc.call<void, void>('test.action', null);
-  // //
-  // //     expect(receivedDI, isNotNull);
-  // //     expect(receivedDI, isA<DependencyInjector>());
-  // //   });
-  // // });
-  //
-  // // group('Dependency Injection Tests', () {
-  // //   test(
-  // //     'should support dependency injection between middleware and action',
-  // //     () async {
-  // //       imc.register<void, String>('user', (ctx) {
-  // //         ctx.di.put(TestService(ctx.params));
-  // //       });
-  // //
-  // //       imc.register<String, String>('user.getById', (ctx) {
-  // //         final service = ctx.di.get<TestService>();
-  // //         return service.getData();
-  // //       });
-  // //
-  // //       final result = await imc.call<String, String>(
-  // //         'user.getById',
-  // //         'test-data',
-  // //       );
-  // //       expect(result, equals('Service data: test-data'));
-  // //     },
-  // //   );
-  // //
-  // //   test(
-  // //     'should maintain separate DI contexts for different calls',
-  // //     () async {
-  // //       imc.register<void, String>('user', (ctx) {
-  // //         ctx.di.put(TestService(ctx.params));
-  // //       });
-  // //
-  // //       imc.register<String, String>('user.getById', (ctx) {
-  // //         final service = ctx.di.get<TestService>();
-  // //         return service.getData();
-  // //       });
-  // //
-  // //       final result1 = await imc.call<String, String>(
-  // //         'user.getById',
-  // //         'data1',
-  // //       );
-  // //       final result2 = await imc.call<String, String>(
-  // //         'user.getById',
-  // //         'data2',
-  // //       );
-  // //
-  // //       expect(result1, equals('Service data: data1'));
-  // //       expect(result2, equals('Service data: data2'));
-  // //     },
-  // //   );
-  // // });
-  //
-  // // group('Error Handling Tests', () {
-  // //   test('should handle exceptions in callbacks gracefully', () async {
-  // //     imc.register<String, String>('user.error', (ctx) {
-  // //       throw Exception('Test error');
-  // //     });
-  // //
-  // //     expect(
-  // //       () async => await imc.call<String, String>('user.error', 'params'),
-  // //       throwsException,
-  // //     );
-  // //   });
-  // //
-  // //   test('should handle async exceptions in callbacks', () async {
-  // //     imc.register<String, String>('user.asyncError', (ctx) async {
-  // //       await Future.delayed(Duration(milliseconds: 10));
-  // //       throw Exception('Async test error');
-  // //     });
-  // //
-  // //     expect(
-  // //       () async =>
-  // //           await imc.call<String, String>('user.asyncError', 'params'),
-  // //       throwsException,
-  // //     );
-  // //   });
-  // // });
-  //
-  // // group('Disposal Tests', () {
-  // //   test('should dispose successfully', () {
-  // //     expect(() => imc.dispose(), returnsNormally);
-  // //   });
-  // //
-  // //   test('should throw ImcException when used after disposal', () {
-  // //     imc.dispose();
-  // //
-  // //     expect(
-  // //       () => imc.register<void, void>('test.action', (ctx) {}),
-  // //       throwsA(isA<ImcException>()),
-  // //     );
-  // //   });
-  // //
-  // //   test('should not throw when disposing multiple times', () {
-  // //     imc.dispose();
-  // //     expect(() => imc.dispose(), returnsNormally);
-  // //   });
-  // // });
-  //
-  // // group('Edge Cases', () {
-  // //   test('should handle empty string path segments gracefully', () {
-  // //     expect(
-  // //       () => imc.register<void, void>('', (ctx) {}),
-  // //       throwsA(isA<ImcException>()),
-  // //     );
-  // //   });
-  // //
-  // //   test('should handle single segment paths', () async {
-  // //     imc.register<String, String>(
-  // //       'action',
-  // //       (ctx) => 'Result: ${ctx.params}',
-  // //     );
-  // //
-  // //     final result = await imc.call<String, String>('action', 'test');
-  // //     expect(result, equals('Result: test'));
-  // //   });
-  // //
-  // //   test('should handle very deep nested paths', () async {
-  // //     imc.register<String, String>(
-  // //       'a.b.c.d.e.f.action',
-  // //       (ctx) => 'Deep: ${ctx.params}',
-  // //     );
-  // //
-  // //     final result = await imc.call<String, String>(
-  // //       'a.b.c.d.e.f.action',
-  // //       'test',
-  // //     );
-  // //     expect(result, equals('Deep: test'));
-  // //   });
-  // // });
-  //
-  // // group('Type Safety Tests', () {
-  // // test('should work with different return types', () async {
-  // //   imc.register<int, String>('math.length', (ctx) => ctx.params.length);
-  // //   imc.register<bool, int>('math.isEven', (ctx) => ctx.params % 2 == 0);
-  // //   imc.register<List<String>, String>(
-  // //     'string.split',
-  // //     (ctx) => ctx.params.split(' '),
-  // //   );
-  // //
-  // //   expect(await imc.call<int, String>('math.length', 'hello'), equals(5));
-  // //   expect(await imc.call<bool, int>('math.isEven', 4), isTrue);
-  // //   expect(
-  // //     await imc.call<List<String>, String>('string.split', 'a b c'),
-  // //     equals(['a', 'b', 'c']),
-  // //   );
-  // // });
-  //
-  // // test('should work with complex generic types', () async {
-  // //   imc.register<Map<String, dynamic>, TestUser>('user.serialize', (ctx) {
-  // //     return {'name': ctx.params.name, 'age': ctx.params.age};
-  // //   });
-  // //
-  // //   final user = TestUser('Alice', 30);
-  // //   final result = await imc.call<Map<String, dynamic>, TestUser>(
-  // //     'user.serialize',
-  // //     user,
-  // //   );
-  // //
-  // //   expect(result, equals({'name': 'Alice', 'age': 30}));
-  // // });
-  // // });
-  //
-  // // group('Performance Tests', () {
-  // //   test('should handle multiple rapid calls efficiently', () async {
-  // //     imc.register<String, int>('perf.echo', (ctx) => 'Value: ${ctx.params}');
-  // //
-  // //     final futures = List.generate(
-  // //       100,
-  // //       (i) => imc.call<String, int>('perf.echo', i),
-  // //     );
-  // //
-  // //     final results = await Future.wait(futures);
-  // //
-  // //     expect(results.length, equals(100));
-  // //     expect(results[50], equals('Value: 50'));
-  // //   });
-  // // });
-  // // });
-}
+  setUp(() {
+    imc = Imc();
+  });
 
-// Test helper classes
-class TestUser {
-  TestUser(this.name, this.age);
-  final String name;
-  final int age;
-}
+  group('IMC Registration', () {
+    test('should register simple callback', () {
+      expect(
+        () => imc.register('test.action', (ctx) => 'result'),
+        returnsNormally,
+      );
+    });
 
-class TestService {
-  TestService(this.data);
-  final String data;
+    test('should register nested paths', () {
+      expect(
+        () => imc.register('module.sub.action', (ctx) => 'result'),
+        returnsNormally,
+      );
+    });
 
-  String getData() => 'Service data: $data';
+    test('should allow multiple callbacks on same path', () {
+      imc.register('test.action', (ctx) => 'first');
+      expect(
+        () => imc.register('test.action', (ctx) => 'second'),
+        returnsNormally,
+      );
+    });
+  });
+
+  group('IMC Execution', () {
+    test('should execute single callback', () async {
+      imc.register('test.action', (ctx) => 'result');
+
+      final result = await imc('test.action', null);
+
+      expect(result, equals('result'));
+    });
+
+    test('should execute multiple callbacks in sequence', () async {
+      final executionOrder = <String>[];
+
+      imc.register('test.action', (ctx) {
+        executionOrder.add('first');
+        return 'result1';
+      });
+
+      imc.register('test.action', (ctx) {
+        executionOrder.add('second');
+        return 'result2';
+      });
+
+      final result = await imc('test.action', null);
+
+      expect(executionOrder, equals(['first', 'second']));
+      expect(result, equals('result2')); // Last callback result
+    });
+
+    test('should pass data through context', () async {
+      dynamic receivedData;
+
+      imc.register('test.action', (ctx) {
+        receivedData = ctx.data;
+      });
+
+      await imc('test.action', [1, 2, 3]);
+
+      expect(receivedData, equals([1, 2, 3]));
+    });
+
+    test('should provide correct path in context', () async {
+      List<String>? receivedPath;
+
+      imc.register('module.sub.action', (ctx) {
+        receivedPath = ctx.path;
+      });
+
+      await imc('module.sub.action', null);
+
+      expect(receivedPath, equals(['module', 'sub', 'action']));
+    });
+
+    test('should update context.last with each callback result', () async {
+      imc.register('test.action', (ctx) {
+        expect(ctx.last, isNull);
+        return 'first';
+      });
+
+      imc.register('test.action', (ctx) {
+        expect(ctx.last, equals('first'));
+        return 'second';
+      });
+
+      await imc('test.action', null);
+    });
+
+    test('should handle async callbacks', () async {
+      imc.register('test.action', (ctx) async {
+        await Future.delayed(const Duration(milliseconds: 10));
+        return 'async result';
+      });
+
+      final result = await imc('test.action', null);
+
+      expect(result, equals('async result'));
+    });
+
+    test('should throw ImcException for unregistered path', () async {
+      expect(
+        () async => imc('nonexistent.action', null),
+        throwsA(isA<ImcException>()),
+      );
+    });
+
+    test('should throw ImcException for partially registered path', () async {
+      imc.register('test.action', (ctx) => 'result');
+
+      expect(
+        () async => imc('test.action.nested', null),
+        throwsA(isA<ImcException>()),
+      );
+    });
+  });
+
+  group('IMC Middleware attern', () {
+    test('should execute middleware before final action', () async {
+      final executionOrder = <String>[];
+
+      imc.register('auth', (ctx) {
+        executionOrder.add('auth middleware');
+      });
+
+      imc.register('auth.login', (ctx) {
+        executionOrder.add('login action');
+        return 'logged in';
+      });
+
+      await imc('auth.login', null);
+
+      expect(executionOrder, equals(['auth middleware', 'login action']));
+    });
+
+    test('should pass modified data through middleware chain', () async {
+      imc.register('process', (ctx) {
+        ctx.data = '${ctx.data}_processed';
+      });
+
+      imc.register('process.validate', (ctx) {
+        ctx.data = '${ctx.data}_validated';
+      });
+
+      imc.register('process.validate.save', (ctx) {
+        return ctx.data;
+      });
+
+      final result = await imc('process.validate.save', 'data');
+
+      expect(result, equals('data_processed_validated'));
+    });
+  });
+
+  group('IMC Context Behavior', () {
+    test('should maintain separate context per call', () async {
+      final contexts = <ImcContext>[];
+
+      imc.register('test.action', contexts.add);
+
+      await imc('test.action', 'data1');
+      await imc('test.action', 'data2');
+
+      expect(contexts.length, equals(2));
+      expect(contexts[0].data, equals('data1'));
+      expect(contexts[1].data, equals('data2'));
+      expect(identical(contexts[0], contexts[1]), isFalse);
+    });
+
+    test('should increment index as path is traversed', () async {
+      final indices = <String>[];
+
+      imc.register('level1', (ctx) => indices.add(ctx.current));
+      imc.register('level1.level2', (ctx) => indices.add(ctx.current));
+      imc.register('level1.level2.level3', (ctx) => indices.add(ctx.current));
+
+      await imc('level1.level2.level3', null);
+
+      expect(indices, equals(['level1', 'level2', 'level3']));
+    });
+  });
+
+  group('IMC Error Handling', () {
+    test('should propagate callback exceptions', () async {
+      imc.register('test.error', (ctx) {
+        throw Exception('Test error');
+      });
+
+      expect(() async => imc('test.error', null), throwsException);
+    });
+
+    test('should not execute remaining callbacks after exception', () async {
+      var secondCallbackExecuted = false;
+
+      imc.register('test.error', (ctx) {
+        throw Exception('Test error');
+      });
+
+      imc.register('test.error', (ctx) {
+        secondCallbackExecuted = true;
+      });
+
+      try {
+        await imc('test.error', null);
+      } catch (_) {}
+
+      expect(secondCallbackExecuted, isFalse);
+    });
+
+    test(
+      'should provide helpful error message for unregistered path',
+      () async {
+        try {
+          await imc('unregistered.path', null);
+          fail('Should have thrown ImcException');
+        } catch (e) {
+          expect(e, isA<ImcException>());
+          expect(e.toString(), contains('not registered yet'));
+        }
+      },
+    );
+  });
+
+  group('IMC Edge Cases', () {
+    test('should handle null data', () async {
+      dynamic receivedData;
+
+      imc.register('test.action', (ctx) {
+        receivedData = ctx.data;
+      });
+
+      await imc('test.action', null);
+
+      expect(receivedData, isNull);
+    });
+
+    test('should handle complex object data', () async {
+      final testData = {
+        'key': 'value',
+        'nested': {'data': 123},
+      };
+      dynamic receivedData;
+
+      imc.register('test.action', (ctx) {
+        receivedData = ctx.data;
+      });
+
+      await imc('test.action', testData);
+
+      expect(receivedData, equals(testData));
+    });
+
+    test('should handle single-segment paths', () async {
+      imc.register('single', (ctx) => 'result');
+
+      final result = await imc('single', null);
+
+      expect(result, equals('result'));
+    });
+
+    test('should handle deeply nested paths', () async {
+      imc.register('a.b.c.d.e.f', (ctx) => 'deep');
+
+      final result = await imc('a.b.c.d.e.f', null);
+
+      expect(result, equals('deep'));
+    });
+
+    test('should return null if no callbacks return value', () async {
+      imc.register('test.action', (ctx) {
+        // No return statement
+      });
+
+      final result = await imc('test.action', null);
+
+      expect(result, isNull);
+    });
+  });
+
+  group('IMC erformance', () {
+    test('should handle multiple rapid sequential calls', () async {
+      imc.register('test.action', (ctx) => 'result');
+
+      final futures = List.generate(100, (i) => imc('test.action', i));
+
+      final results = await Future.wait(futures);
+
+      expect(results.length, equals(100));
+      expect(results.every((r) => r == 'result'), isTrue);
+    });
+
+    test('should handle concurrent calls correctly', () async {
+      var callCount = 0;
+
+      imc.register('test.action', (ctx) async {
+        await Future.delayed(const Duration(milliseconds: 10));
+        callCount++;
+        return callCount;
+      });
+
+      final futures = List.generate(10, (_) => imc('test.action', null));
+
+      await Future.wait(futures);
+
+      expect(callCount, equals(10));
+    });
+  });
 }

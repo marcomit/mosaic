@@ -102,27 +102,3 @@ class Imc {
     return _root._walk(path, params);
   }
 }
-
-class ImcException extends MosaicException {
-  ImcException(super.message, {super.cause, super.fix});
-  @override
-  String get name => 'ImcException';
-}
-
-void main() async {
-  final imc = Imc();
-  imc.register('test.test01', (ctx) {
-    // print(ctx.path);
-    // print(ctx.current);
-    // print(ctx.data);
-    return 'pippo';
-  });
-  imc.register('test.test01', (ctx) {
-    // print(ctx.data);
-    print(ctx.current);
-    return 'dai';
-  });
-
-  final result = await imc('test.test01', [1, 2, 3, 4]);
-  print('Result $result');
-}

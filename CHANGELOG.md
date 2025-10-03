@@ -42,3 +42,5 @@
 ## 1.0.4
 - Added walk command in the CLI
 - Deleted debug print
+## 1.0.5
+- Introduced Imc system

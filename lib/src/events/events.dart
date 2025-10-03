@@ -222,7 +222,7 @@ class Events {
 
     final listener = on(channel, (EventContext<T> ctx) {
       callback(ctx);
-      completer.complete();
+      if (!completer.isCompleted) completer.complete();
     });
 
     completer.future.then((_) => deafen(listener));
