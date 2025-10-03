@@ -221,9 +221,15 @@ class Logger {
 
   /// Tags used to filter which log messages are processed.
   ///
-  /// Only messages with at least one matching tag will be logged.
+  /// Only messages with at least one matching tag will be processed.
+  /// But if the log message has a tag to exclude it may not be logged.
   /// If empty, all messages are processed regardless of tags.
   final Set<String> _tags = {};
+
+  /// Tags used to filter which log messages are discarded.
+  ///
+  /// Messages with at least one matching tag won't be logged.
+  final Set<String> _excludedTags = {};
 
   /// Map of active dispatchers that handle log output.
   ///
@@ -455,6 +461,7 @@ class Logger {
   /// * [tags] - List of tags to filter logs. Empty list means log everything
   /// * [dispatchers] - Output destinations for log messages
   /// * [defaultTags] - Tags automatically added to every log message
+  /// * [excludedTags] - List of tags that not log
   ///
   /// **Performance Tips:**
   /// - Use specific tags in production to reduce processing overhead
@@ -465,15 +472,19 @@ class Logger {
   /// * [LoggerException] if called on a disposed logger
   /// * Various exceptions if dispatcher initialization fails
   Future<void> init({
-    required List<String> tags,
-    required List<LoggerDispatcher> dispatchers,
-    List<String>? defaultTags,
+    List<String> tags = const [],
+    List<LoggerDispatcher> dispatchers = const [],
+    List<String> defaultTags = const [],
+    List<String> excludedTags = const [],
   }) async {
     _tags.clear();
     _tags.addAll(tags);
 
     _defaultTags.clear();
-    if (defaultTags != null) _defaultTags.addAll(defaultTags);
+    _defaultTags.addAll(defaultTags);
+
+    _excludedTags.clear();
+    _excludedTags.addAll(excludedTags);
 
     _dispatchers.clear();
     for (final dispatcher in dispatchers) {
@@ -655,10 +666,16 @@ class Logger {
   /// Determines if a message with the given [tags] should be processed.
   ///
   /// Returns `true` if:
+  /// - All log tags are not excluded AND
   /// - The tag filter is empty (log everything), OR
   /// - At least one of the message tags matches a filter tag
   bool _canDispatch(List<String> tags) {
     if (_tags.isEmpty) return true;
+
+    for (final tag in tags) {
+      if (_excludedTags.contains(tag)) return false;
+    }
+
     for (final tag in tags) {
       if (_tags.contains(tag)) return true;
     }
