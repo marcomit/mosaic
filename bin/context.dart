@@ -145,7 +145,7 @@ ${lines.map((l) => '// $l').join('\n')}
     final name = config.get('name');
     final root = await env.root();
 
-    final path = utils.join([root!.path, name, 'lib', 'init.dart']);
+    final path = utils.join([root.path, name, 'lib', 'init.dart']);
 
     final file = await utils.ensureExists(path);
 
@@ -154,8 +154,6 @@ ${lines.map((l) => '// $l').join('\n')}
 
   Future<Directory> main() async {
     final root = await env.root();
-
-    if (root == null) throw const CliException('Not in a valid mosaic.');
 
     final name = config.get('name')!;
 

@@ -81,7 +81,7 @@ profiles:
   void set(String key, dynamic value) => _config[key] = value;
 
   Future<void> save() async {
-    final env = (await Environment().root())!;
+    final env = await Environment().root();
     final path = utils.join([env.path, Environment.projectMarker]);
     await write(path, _config);
   }
@@ -110,10 +110,6 @@ profiles:
 
   Future<Map<String, dynamic>> loadFromEnv() async {
     final env = await Environment().root();
-
-    if (env == null) {
-      throw Exception('Invalid root');
-    }
 
     _config = await readConfig(env.path);
     return _config;

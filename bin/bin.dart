@@ -212,6 +212,10 @@ void setupProfileCommands(Argv app) {
     //     .on(require('name'))
     //     .check
     //     .use<ProfileService>((p) => p.delete)
+    ..command(
+      'sync',
+      description: 'Sync tesserae to profile',
+    ).check.validateConfig.sync
     ..command('add', description: 'Add tessera to profile')
         .positional('tessera')
         .positional('profile')

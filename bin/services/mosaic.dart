@@ -59,7 +59,7 @@ class MosaicService {
       'flutter',
       'run',
       '-t',
-      utils.join([root!.path, name]),
+      utils.join([root.path, name]),
     ]);
   }
 
@@ -217,12 +217,12 @@ class MosaicService {
 
   Future<void> status(ArgvResult cli) async {
     final ctx = cli.get<Context>();
-    final root = await ctx.env.root();
 
-    if (root == null) {
+    if (await ctx.env.isValid()) {
       print('✗ '.red + 'Not in a mosaic project'.dim);
       return;
     }
+    final root = await ctx.env.root();
 
     final config = ctx.config;
     final tesserae = await ctx.tesserae();

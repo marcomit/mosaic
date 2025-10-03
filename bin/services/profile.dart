@@ -196,7 +196,8 @@ class ProfileService {
 
   Future<void> sync(ArgvResult cli) async {
     final ctx = cli.get<Context>();
-    final tesserae = await ctx.tesserae();
+    final root = await ctx.env.root();
+    final tesserae = await ctx.tesserae(root.path);
 
     final profile = await validateProfile(cli);
 
