@@ -33,6 +33,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mosaic/mosaic.dart';
+import 'package:mosaic/src/imc/caller.dart';
 
 /// Lifecycle states for module management.
 ///
@@ -134,7 +135,7 @@ class InternalRoute<T> {
 ///
 /// All module operations are thread-safe and can be called from any isolate.
 /// Internal state changes are synchronized to prevent race conditions.
-abstract class Module with Loggable {
+abstract class Module with Loggable, ImcCallable {
   /// Creates a new module with the specified configuration.
   ///
   /// **Parameters:**
@@ -161,6 +162,9 @@ abstract class Module with Loggable {
 
   @override
   List<String> get loggerTags => [name];
+
+  @override
+  String get imcName => name;
 
   /// Whether the module is currently active and can handle requests.
   bool get active => _state == ModuleLifecycleState.active;

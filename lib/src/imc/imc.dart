@@ -34,8 +34,6 @@ import 'dart:async';
 import 'package:mosaic/exceptions.dart';
 import 'package:mosaic/mosaic.dart';
 
-// import 'package:mosaic/src/dependency_injection/dependency_injector.dart';
-
 typedef ImcCallback = FutureOr<dynamic> Function(ImcContext);
 
 class ImcContext {
@@ -51,7 +49,7 @@ class _ImcNode {
   _ImcNode(this.name);
   final String name;
   final Map<String, _ImcNode> children = {};
-  final List<ImcCallback> callbacks = [];
+  ImcCallback? callback;
 
   Future<dynamic> _walk(List<String> path, dynamic data) async {
     _ImcNode curr = this;
@@ -71,9 +69,8 @@ class _ImcNode {
   }
 
   Future<void> _execute(ImcContext ctx) async {
-    for (final callback in callbacks) {
-      ctx.last = await callback(ctx);
-    }
+    if (callback == null) return;
+    ctx.last = await callback!(ctx);
   }
 
   void _register(List<String> path, ImcCallback callback) {
@@ -84,7 +81,11 @@ class _ImcNode {
       }
       curr = curr.children[segment]!;
     }
-    curr.callbacks.add(callback);
+
+    if (curr.callback != null) {
+      throw ImcException('Callback for $path already registered');
+    }
+    curr.callback = callback;
   }
 }
 
