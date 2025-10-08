@@ -30,6 +30,7 @@
 */
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:mosaic/exceptions.dart';
 import 'package:mosaic/mosaic.dart';
@@ -51,14 +52,49 @@ class _ImcNode {
   final Map<String, _ImcNode> children = {};
   ImcCallback? callback;
 
+  int _getDistance(String a, String b) {
+    if (a.isEmpty) return b.length;
+    if (b.isEmpty) return a.length;
+
+    final trimmedA = a.substring(0, a.length - 1);
+    final trimmedB = b.substring(0, b.length - 1);
+    if (a[a.length - 1] == b[b.length - 1]) {
+      return _getDistance(trimmedA, trimmedB);
+    }
+
+    int res = _getDistance(trimmedA, b);
+    res = min(res, _getDistance(a, trimmedB));
+    res = min(res, _getDistance(trimmedA, trimmedB));
+
+    return 1 + res;
+  }
+
+  String? _getClosestMatch(String name) {
+    int minDistance = 1 << 31;
+    String? closest;
+
+    for (final child in children.keys) {
+      final distance = _getDistance(child, name);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = child;
+      }
+    }
+
+    return closest;
+  }
+
   Future<dynamic> _walk(List<String> path, dynamic data) async {
     _ImcNode curr = this;
     final context = ImcContext(data, path);
     for (final segment in path) {
       if (!curr.children.containsKey(segment)) {
+        final closest = curr._getClosestMatch(segment);
         throw ImcException(
           'The action $segment of $path is not registered yet',
-          fix: 'Try to register a callback in this path before calling it',
+          fix: closest == null
+              ? 'Try to register it before'
+              : 'Did you mean $closest instead of $segment?',
         );
       }
       curr = curr.children[segment]!;
