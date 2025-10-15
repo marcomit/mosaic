@@ -44,3 +44,5 @@
 - Deleted debug print
 ## 1.0.5
 - Introduced Imc system
+## 1.0.6
+- Removed sync command CLI
