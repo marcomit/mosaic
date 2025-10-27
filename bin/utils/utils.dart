@@ -96,6 +96,11 @@ class Utils {
   }) async {
     path ??= Directory.current.path;
 
+    if (Platform.isWindows) {
+      command.insert(0, 'cmd');
+      command.insert(0, '/c');
+    }
+
     final process = await Process.start(
       command[0],
       command.sublist(1),
