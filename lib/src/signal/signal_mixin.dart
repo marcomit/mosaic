@@ -32,41 +32,31 @@ import 'package:flutter/widgets.dart';
 import 'signal.dart';
 
 mixin StatefulSignal<T extends StatefulWidget> on State<T> {
-  final List<Signal> signals = [];
-  final Map<Signal, Object> _listener = {};
-
-  @override
-  void initState() {
-    super.initState();
-    for (final state in signals) {
-      state.watch(_refresh);
-    }
-  }
+  final Map<Signal, Object> _listeners = {};
 
   @override
   void dispose() {
-    super.dispose();
-    for (final state in signals) {
-      state.unwatch();
-    }
-    for (final MapEntry(:key, :value) in _listener.entries) {
+    for (final MapEntry(:key, :value) in _listeners.entries) {
       key.unwatch(value);
     }
+    _listeners.clear();
+    super.dispose();
   }
 
-  void _refresh<R>(R param) {
-    if (!mounted) return;
-    if (context is! Element) return;
-    (context as Element).markNeedsBuild();
+  void _refresh<R>(R _) {
+    if (mounted) (context as Element).markNeedsBuild();
   }
 
-  R watch<R>(Signal<R> provider) {
-    if (!_listener.containsKey(provider)) {
-      _listener[provider] = Object();
+  R watch<R>(Signal<R> signal) {
+    if (!_listeners.containsKey(signal)) {
+      final token = signal.watch(_refresh);
+      _listeners[signal] = token;
     }
-    provider.watch(_refresh, _listener[provider]!);
-    return provider.state;
+    return signal.state;
   }
 
-  void unwatch<R>(Signal<R> provider) => _listener.remove(provider);
+  void unwatch<R>(Signal<R> signal) {
+    final token = _listeners.remove(signal);
+    if (token != null) signal.unwatch(token);
+  }
 }

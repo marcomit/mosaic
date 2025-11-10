@@ -144,7 +144,7 @@ class Signal<T> {
   /// See also:
   /// * [unwatch] to remove listeners
   /// * [dispose] to remove all listeners
-  SignalListener watch(SignalCallback callback, [Object? identifier]) {
+  SignalListener watch(SignalCallback callback) {
     if (_disposed) {
       throw SignalException(
         'Called watch after the signal was disposed.',
@@ -152,14 +152,9 @@ class Signal<T> {
         fix: 'Ensure you unwatch the signal on dispose',
       );
     }
-    identifier ??= Object();
-
-    // Listener already registered for this watcher
-    if (_listeners.containsKey(identifier)) return identifier;
-
-    _listeners[identifier] = callback;
-
-    return identifier;
+    final token = Object();
+    _listeners[token] = callback;
+    return token;
   }
 
   /// Removes all listeners and cleans up resources.
@@ -251,10 +246,7 @@ class Signal<T> {
   /// See also:
   /// * [watch] to add listeners
   /// * [dispose] to remove all listeners
-  void unwatch([Object? watcher]) {
-    final id = watcher ?? Object();
-    _listeners.remove(id);
-  }
+  void unwatch(Object watcher) => _listeners.remove(watcher);
 
   /// Returns the current state value.
   ///
