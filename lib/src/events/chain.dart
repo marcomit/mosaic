@@ -80,7 +80,7 @@ abstract class Segment {
   /// ```dart
   /// segment.$('user').$('login').emit<String>('user123');
   /// ```
-  void emit<T>([T? data, bool retain = false]) =>
+  void emit<T>(T data, [bool retain = false]) =>
       mosaic.events.emit<T>(topic, data, retain);
 
   /// Registers a listener for events on the current topic path.

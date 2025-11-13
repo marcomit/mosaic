@@ -37,7 +37,7 @@ mixin ImcCallable {
   Imc get imc => mosaic.imc;
 
   String _getActionName(String action) {
-    return [imcName, action].join(imc.sep);
+    return [imcName, action].join(imc.separator);
   }
 
   void register(String action, ImcCallback callback) {

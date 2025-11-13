@@ -285,6 +285,8 @@ class Imc {
   /// Separator character(s) used to split action paths.
   final String _sep;
 
+  String get separator => _sep;
+
   /// Splits an action string into path segments.
   List<String> _path(String action) => action.split(_sep);
 
