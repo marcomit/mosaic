@@ -110,20 +110,18 @@ class EventListener<T> {
   /// Extracts dynamic parameters from the event path
   /// when using `*` or `#` wildcards.
   List<String> _getParams(List<String> channel) {
-    final List<String> res = [];
-    int pathIndex = 0;
+    final List<String> params = [];
 
-    for (int i = 0; i < channel.length && pathIndex < path.length; i++) {
-      if (pathIndex >= path.length) break;
+    for (int i = 0; i < channel.length && i < path.length; i++) {
+      if (i >= path.length) break;
 
-      if (path[pathIndex] == '#') {
-        return [...res, ...channel.sublist(i)];
-      } else if (path[pathIndex] == '*') {
-        res.add(channel[i]);
+      if (path[i] == '#') {
+        return [...params, ...channel.sublist(i)];
+      } else if (path[i] == '*') {
+        params.add(channel[i]);
       }
-      pathIndex++;
     }
-    return res;
+    return params;
   }
 
   @override
@@ -162,9 +160,63 @@ class Events {
   /// Segment separator for channels (default: `/`).
   String sep;
 
-  final List<EventListener> _listeners = [];
+  String? _namespace;
+  Events? _parent;
 
-  final Map<String, dynamic> _retained = {};
+  final List<EventListener> _selfGlobalListeners = [];
+  final Map<int, List<EventListener>> _selfFixedLengthListeners = {};
+  final Map<String, List<EventListener>> _selfStaticListeners = {};
+
+  final Map<String, dynamic> _selfRetained = {};
+
+  List<EventListener> get _globalListeners {
+    if (_parent != null) return _parent!._globalListeners;
+    return _selfGlobalListeners;
+  }
+
+  Map<int, List<EventListener>> get _fixedLengthListeners {
+    if (_parent != null) return _parent!._fixedLengthListeners;
+    return _selfFixedLengthListeners;
+  }
+
+  Map<String, List<EventListener>> get _staticListeners {
+    if (_parent != null) return _parent!._staticListeners;
+    return _selfStaticListeners;
+  }
+
+  Map<String, dynamic> get _retained {
+    if (_parent != null) return _parent!._retained;
+    return _selfRetained;
+  }
+
+  List<EventListener> _getMatchingListeners(List<String> path) {
+    final listeners = <EventListener>[];
+
+    listeners.addAll(_staticListeners[path.join(sep)] ?? []);
+
+    for (final listener in _fixedLengthListeners[path.length] ?? []) {
+      if (listener._verify(path)) listeners.add(listener);
+    }
+
+    for (final listener in _globalListeners) {
+      if (listener._verify(path)) listeners.add(listener);
+    }
+    return listeners;
+  }
+
+  void _registerListener(EventListener listener) {
+    if (listener.path.contains('#')) {
+      _globalListeners.add(listener);
+    } else if (listener.path.contains('*')) {
+      _fixedLengthListeners
+          .putIfAbsent(listener.path.length, () => [])
+          .add(listener);
+    } else {
+      _staticListeners
+          .putIfAbsent(listener.path.join(sep), () => [])
+          .add(listener);
+    }
+  }
 
   /// Registers a listener on a specific channel.
   ///
@@ -188,17 +240,16 @@ class Events {
   /// });
   /// ```
   EventListener<T> on<T>(String channel, EventCallback<T> callback) {
+    final path = <String>[];
+    if (_namespace != null) path.add(_namespace!);
+    path.addAll(channel.split(sep).where((s) => s.isNotEmpty).toList());
     if (channel.isEmpty) throw EventException('Channel cannot be empty');
 
-    final listener = EventListener<T>(channel.split(sep), callback);
+    final listener = EventListener<T>(path, callback);
 
     _deliverRetainedEvents<T>(listener, channel);
+    _registerListener(listener);
 
-    _listeners.add(listener);
-    // mosaic.logger.info(
-    //   'Registered listener for \'$channel\' (${_listeners.length} total)',
-    //   ['events'],
-    // );
     return listener;
   }
 
@@ -256,7 +307,8 @@ class Events {
 
       try {
         final data = _retained[route];
-        if (data is! T || data == null) continue;
+        if (data == null && null is! T) continue;
+        if (data != null && data is! T) continue;
         final context = EventContext<T>(
           data as T?,
           channel,
@@ -293,28 +345,32 @@ class Events {
   /// // Retained event
   /// events.emit<bool>('app/ready', true, true);
   /// ```
-  void emit<T>(String channel, [T? data, bool retain = false]) {
-    if (channel.isEmpty) {
-      mosaic.logger.warning('Attempted to emit event on empty channel', [
-        'events',
-      ]);
-      return;
+  ///
+  /// Performance considerations:
+  /// Listeners are stored in 3 different way:
+  /// 1. Static listeners that does not contains wildcard.
+  ///   Emitting a static listener is O(1).
+  /// 2. Listeners that contains only '*' wildcard.
+  ///   It takes O(m) where m is listeners that has m segments.
+  /// 3. Listeners with # wildcard.
+  ///   For this type of listener is O(n).
+  void emit<T>(String channel, T data, [bool retain = false]) {
+    if (_namespace != null) {
+      channel = _namespace! + sep + channel;
     }
+    final path = channel.split(sep).where((s) => s.isNotEmpty).toList();
 
-    final path = channel.split(sep);
-    // mosaic.logger.info('Emitting \'$channel\'${retain ? ' (retained)' : ''}', [
-    //   'events',
-    // ]);
+    if (path.isEmpty) {
+      throw EventException('Invalid channel after normalization');
+    }
 
     if (retain) {
       _retained[channel] = data;
     }
 
-    // int notifiedCount = 0;
+    final listeners = _getMatchingListeners(path);
 
-    for (final listener in _listeners) {
-      if (!listener._verify(path)) continue;
-
+    for (final listener in listeners) {
       try {
         final context = EventContext<T>(
           data,
@@ -322,23 +378,52 @@ class Events {
           listener._getParams(path),
         );
         if (listener is! EventListener<T>) {
-          throw EventException(
-            'Mismatch types',
-            cause: 'Expected EventListener<$T>, found ${listener.runtimeType}',
-            fix: 'Try to match all listeners types',
+          mosaic.logger.warning(
+            'Type mismatch: Expected EventListener<$T>, found ${listener.runtimeType}',
+            ['events'],
           );
+          continue;
         }
         listener.callback(context);
-        // notifiedCount++;
       } catch (e) {
         mosaic.logger.error('Error in event listener for \'$channel\': $e', [
           'events',
         ]);
       }
     }
-    // mosaic.logger.debug('Notified $notifiedCount listeners for \'$channel\'', [
-    //   'events',
-    // ]);
+  }
+
+  /// Uses a prefix for emit and receive events.
+  ///
+  /// It puts the [prefix] when [emit] and [on] are called.
+  ///
+  /// Example:
+  /// ```dart
+  /// final userEvents = events.namespace('user');
+  /// userEvents.on('login', callback); // It listen on 'user/login'
+  /// ```
+  ///
+  /// This namespace is also used inside a module.
+  ///
+  /// Example:
+  /// ```dart
+  /// class UserModule extends Module {
+  ///   UserModule() : Module(name: 'user');
+  ///
+  ///   void someMethod() {
+  ///     on('login', callback);
+  ///   }
+  ///   ... rest of the code.
+  /// }
+  /// ```
+  Events namespace(String prefix) {
+    final event = Events();
+    event._namespace = prefix;
+    if (_namespace != null) {
+      event._namespace = '$_namespace$sep$prefix';
+    }
+    event._parent = _parent ?? this;
+    return event;
   }
 
   /// Removes a specific listener.
@@ -352,32 +437,21 @@ class Events {
   /// events.deafen(listener);
   /// ```
   void deafen<T>(EventListener<T> listener) {
-    final wasRemoved = _listeners.remove(listener);
-    if (wasRemoved) {
-      // mosaic.logger.info('Removed listener (${_listeners.length} remaining)', [
-      //   'events',
-      // ]);
+    if (listener.path.contains('#')) {
+      _globalListeners.remove(listener);
+    } else if (listener.path.contains('*')) {
+      final list = _fixedLengthListeners[listener.path.length];
+      list?.remove(listener);
+      if (list != null && list.isEmpty) {
+        _fixedLengthListeners.remove(listener.path.length);
+      }
     } else {
-      // mosaic.logger.warning('Attempted to remove non-existent listener', [
-      //   'events',
-      // ]);
-    }
-  }
-
-  /// Removes the most recently registered listener.
-  ///
-  /// **Note**: This method should be used with caution as it may remove
-  /// unexpected listeners if the registration order is not carefully managed.
-  void pop() {
-    if (_listeners.isNotEmpty) {
-      _listeners.removeLast();
-      // mosaic.logger.info('Popped listener (${_listeners.length} remaining)', [
-      //   'events',
-      // ]);
-    } else {
-      // mosaic.logger.warning('Attempted to pop from empty listener list', [
-      //   'events',
-      // ]);
+      final key = listener.path.join(sep);
+      final list = _staticListeners[key];
+      list?.remove(listener);
+      if (list != null && list.isEmpty) {
+        _staticListeners.remove(key);
+      }
     }
   }
 
@@ -386,16 +460,10 @@ class Events {
   /// This method is useful for cleanup during application shutdown
   /// or when resetting the event system.
   void clear() {
-    // final listenerCount = _listeners.length;
-    // final retainedCount = _retained.length;
-
-    _listeners.clear();
+    _globalListeners.clear();
+    _fixedLengthListeners.clear();
+    _staticListeners.clear();
     _retained.clear();
-
-    // mosaic.logger.info(
-    //   'Cleared $listenerCount listeners and $retainedCount retained events',
-    //   ['events'],
-    // );
   }
 
   /// Removes all retained events.
@@ -409,7 +477,16 @@ class Events {
   }
 
   // Returns the number of registered listeners.
-  int get listenerCount => _listeners.length;
+  int get listenerCount {
+    int res = _globalListeners.length;
+    for (final listeners in _fixedLengthListeners.values) {
+      res += listeners.length;
+    }
+    for (final listeners in _staticListeners.values) {
+      res += listeners.length;
+    }
+    return res;
+  }
 
   /// Returns the number of retained events.
   int get retainedEventCount => _retained.length;
@@ -419,5 +496,5 @@ class Events {
 
   @override
   String toString() =>
-      'Events(listeners: ${_listeners.length}, retained: ${_retained.length})';
+      'Events(listeners: $listenerCount, retained: ${_retained.length})';
 }

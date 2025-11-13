@@ -46,3 +46,7 @@
 - Introduced Imc system
 ## 1.0.6
 - Removed sync command CLI
+## 1.0.7
+- Optimized look up event listeners
+- Introduced namespace support for events
+- Fixed empty path events
