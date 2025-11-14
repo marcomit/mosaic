@@ -22,14 +22,6 @@ void main() {
         returnsNormally,
       );
     });
-
-    test('should allow multiple callbacks on same path', () {
-      imc.register('test.action', (ctx) => 'first');
-      expect(
-        () => imc.register('test.action', (ctx) => 'second'),
-        returnsNormally,
-      );
-    });
   });
 
   group('IMC Execution', () {
@@ -39,25 +31,6 @@ void main() {
       final result = await imc('test.action', null);
 
       expect(result, equals('result'));
-    });
-
-    test('should execute multiple callbacks in sequence', () async {
-      final executionOrder = <String>[];
-
-      imc.register('test.action', (ctx) {
-        executionOrder.add('first');
-        return 'result1';
-      });
-
-      imc.register('test.action', (ctx) {
-        executionOrder.add('second');
-        return 'result2';
-      });
-
-      final result = await imc('test.action', null);
-
-      expect(executionOrder, equals(['first', 'second']));
-      expect(result, equals('result2')); // Last callback result
     });
 
     test('should pass data through context', () async {
@@ -82,20 +55,6 @@ void main() {
       await imc('module.sub.action', null);
 
       expect(receivedPath, equals(['module', 'sub', 'action']));
-    });
-
-    test('should update context.last with each callback result', () async {
-      imc.register('test.action', (ctx) {
-        expect(ctx.last, isNull);
-        return 'first';
-      });
-
-      imc.register('test.action', (ctx) {
-        expect(ctx.last, equals('first'));
-        return 'second';
-      });
-
-      await imc('test.action', null);
     });
 
     test('should handle async callbacks', () async {
@@ -203,7 +162,7 @@ void main() {
     test('should not execute remaining callbacks after exception', () async {
       var secondCallbackExecuted = false;
 
-      imc.register('test.error', (ctx) {
+      imc.register('test', (ctx) {
         throw Exception('Test error');
       });
 

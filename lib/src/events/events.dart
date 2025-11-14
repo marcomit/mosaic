@@ -52,7 +52,7 @@ class EventContext<T> {
   const EventContext(this.data, this.name, this.params);
 
   /// Data passed with the event, may be null.
-  final T? data;
+  final T data;
 
   /// Full name (or channel) of the emitted event.
   final String name;
@@ -269,14 +269,12 @@ class Events {
   /// })
   /// ```
   void once<T>(String channel, EventCallback<T> callback) {
-    final Completer<void> completer = Completer();
+    late EventListener<T> listener;
 
-    final listener = on(channel, (EventContext<T> ctx) {
+    listener = on(channel, (EventContext<T> ctx) {
       callback(ctx);
-      if (!completer.isCompleted) completer.complete();
+      deafen(listener);
     });
-
-    completer.future.then((_) => deafen(listener));
   }
 
   /// Waits the event and return the data received.
@@ -286,15 +284,12 @@ class Events {
   ///
   /// Example:
   /// ```dart
-  /// final user = events.wait<User>('user/update');
+  /// final user = await events.wait<User>('user/update');
   /// ```
   Future<T> wait<T>(String channel) {
     final data = Completer<T>();
 
-    once<T>(channel, (ctx) {
-      if (ctx.data == null) return;
-      data.complete(ctx.data);
-    });
+    once<T>(channel, (ctx) => data.complete(ctx.data));
 
     return data.future;
   }
@@ -307,10 +302,9 @@ class Events {
 
       try {
         final data = _retained[route];
-        if (data == null && null is! T) continue;
-        if (data != null && data is! T) continue;
+        if (data is! T) continue;
         final context = EventContext<T>(
-          data as T?,
+          data,
           channel,
           listener._getParams(path),
         );
