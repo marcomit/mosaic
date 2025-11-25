@@ -178,6 +178,9 @@ abstract class Module with Loggable, ImcCallable {
   /// The last error that occurred, if any.
   Object? get lastError => _lastError;
 
+  /// Events prefixed by the module name
+  Events get events => mosaic.events.namespace(name);
+
   /// Unique identifier for this module.
   final String name;
 

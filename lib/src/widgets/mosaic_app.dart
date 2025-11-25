@@ -85,8 +85,6 @@ class _MosaicScopeState extends State<MosaicScope>
     if (!context.mounted) return;
     final transition = ctx.data;
 
-    if (transition == null) return;
-
     _currentModule = ctx.params[0];
 
     _triggerListener(transition);

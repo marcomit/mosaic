@@ -50,3 +50,5 @@
 - Optimized look up event listeners
 - Introduced namespace support for events
 - Fixed empty path events
+## 1.0.8
+- UI Injection fixedf priority order

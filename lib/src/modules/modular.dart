@@ -52,7 +52,7 @@ class ModularExtension {
 
   /// Static method used to sort extensions
   static int _compare(ModularExtension a, ModularExtension b) {
-    return a.priority - b.priority;
+    return b.priority - a.priority;
   }
 }
 
@@ -94,9 +94,7 @@ abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
 
   /// Function that will be executed when the listener receives an event
   void _extensionCallback(EventContext<ModularExtension> ctx) {
-    if (ctx.data == null) return;
-
-    extensions.add(ctx.data!);
+    extensions.add(ctx.data);
     extensions.sort(ModularExtension._compare);
     if (mounted) setState(() {});
   }
