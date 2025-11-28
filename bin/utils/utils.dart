@@ -96,35 +96,33 @@ class Utils {
   }) async {
     path ??= Directory.current.path;
 
-    if (Platform.isWindows) {
-      command.insert(0, 'cmd');
-      command.insert(0, '/c');
-    }
-
     final process = await Process.start(
       command[0],
       command.sublist(1),
       workingDirectory: path,
+      runInShell: true,
+      environment: Platform.environment,
+      mode: out ? ProcessStartMode.inheritStdio : ProcessStartMode.normal,
     );
 
-    if (out) {
-      stdout.addStream(process.stdout);
-      stderr.addStream(process.stderr);
-    }
+    final exitCode = await process.exitCode;
 
-    return process.exitCode;
+    return exitCode;
   }
 
+  /// Walks through children.
+  ///
+  /// Starting from [path] or current directory,
+  /// it visits subdirectories with a BFS approach and launch the [visitor] callback.
+  /// It is also a reduce function that start from [initial]
+  /// and accumulate with the result of [visitor] callback.
   Future<T?> walk<T>(
     Future<T?> Function(T?, Directory) visitor, {
     String? path,
     T? initial,
   }) async {
     T? accumulated = initial;
-    Directory curr = Directory.current;
-
-    if (path != null) curr = Directory(path);
-
+    final curr = path == null ? Directory.current : Directory(path);
     final queue = Queue<Directory>();
 
     queue.add(curr);

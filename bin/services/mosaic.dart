@@ -218,7 +218,7 @@ class MosaicService {
   Future<void> status(ArgvResult cli) async {
     final ctx = cli.get<Context>();
 
-    if (await ctx.env.isValid()) {
+    if (!await ctx.env.isValid()) {
       print('✗ '.red + 'Not in a mosaic project'.dim);
       return;
     }
