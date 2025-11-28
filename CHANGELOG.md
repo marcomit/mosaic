@@ -52,3 +52,7 @@
 - Fixed empty path events
 ## 1.0.8
 - UI Injection fixedf priority order
+
+## 1.0.9
+- CLI mosaic status fixed.
+- Added 'no-comment' option to omit comment in generated code.
