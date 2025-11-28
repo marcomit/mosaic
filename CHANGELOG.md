@@ -56,3 +56,6 @@
 ## 1.0.9
 - CLI mosaic status fixed.
 - Added 'no-comment' option to omit comment in generated code.
+
+## 1.0.10
+- Fixed bug 'nc'

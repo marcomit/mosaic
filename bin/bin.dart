@@ -255,7 +255,7 @@ void setupExecutionCommands(Argv app) {
         .use<ProfileService>((p) => p.exec)
     ..command('sync', description: 'Sync profile and generate init files')
         .positional('profile')
-        .flag('no-comment', abbr: 'nc')
+        .flag('no-comment', abbr: 'n')
         .check
         .use<MosaicService>((m) => m.sync);
 }
