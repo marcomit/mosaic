@@ -74,6 +74,7 @@ class MosaicService {
     await ctx.writeInitializationFile(
       tesserae.toList(),
       tesserae.elementAt(0).name,
+      comment: cli.flag('no-comment'),
     );
   }
 

@@ -95,19 +95,22 @@ ${lines.map((l) => '// $l').join('\n')}
 
   Future<String> getInitializationFile(
     List<Tessera> tesserae,
-    String defaultTessera,
-  ) async {
+    String defaultTessera, {
+    bool comment = true,
+  }) async {
     final sorted = Tessera.topologicalSort(tesserae);
     final buf = StringBuffer();
-    buf.writeln(
-      banner([
-        'Tesserae were loaded in TOPOLOGICAL ORDER.',
-        'Circular dependencies are detected automatically',
-        'If a circular dependency exists, your app might CRASH.',
-        'Please keep your tesserae organized ',
-        'and don\'t turn your app into garbage!',
-      ]),
-    );
+    if (comment) {
+      buf.writeln(
+        banner([
+          'Tesserae were loaded in TOPOLOGICAL ORDER.',
+          'Circular dependencies are detected automatically',
+          'If a circular dependency exists, your app might CRASH.',
+          'Please keep your tesserae organized ',
+          'and don\'t turn your app into garbage!',
+        ]),
+      );
+    }
     buf.writeln('import \'package:mosaic/mosaic.dart\';');
     for (final tessera in sorted) {
       buf.writeln(
@@ -138,9 +141,14 @@ ${lines.map((l) => '// $l').join('\n')}
 
   Future<void> writeInitializationFile(
     List<Tessera> tesserae,
-    String defaultTessera,
-  ) async {
-    final content = await getInitializationFile(tesserae, defaultTessera);
+    String defaultTessera, {
+    bool comment = true,
+  }) async {
+    final content = await getInitializationFile(
+      tesserae,
+      defaultTessera,
+      comment: comment,
+    );
 
     final name = config.get('name');
     final root = await env.root();

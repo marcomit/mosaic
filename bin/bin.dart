@@ -253,10 +253,11 @@ void setupExecutionCommands(Argv app) {
         .on(require('command'))
         .check
         .use<ProfileService>((p) => p.exec)
-    ..command(
-      'sync',
-      description: 'Sync profile and generate init files',
-    ).positional('profile').check.use<MosaicService>((m) => m.sync);
+    ..command('sync', description: 'Sync profile and generate init files')
+        .positional('profile')
+        .flag('no-comment', abbr: 'nc')
+        .check
+        .use<MosaicService>((m) => m.sync);
 }
 
 void setupCodeGenerationCommands(Argv app) {
