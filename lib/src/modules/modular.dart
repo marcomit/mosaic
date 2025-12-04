@@ -84,6 +84,8 @@ abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
 
   /// Constructor (only need to define a static string [id])
 
+  final Set<String> _extensions = {};
+
   /// List of extensions
   final List<ModularExtension> extensions = [];
 
@@ -94,6 +96,9 @@ abstract class ModularState<T extends ModularStatefulWidget> extends State<T> {
 
   /// Function that will be executed when the listener receives an event
   void _extensionCallback(EventContext<ModularExtension> ctx) {
+    if (ctx.params.isEmpty) return;
+    final watcher = ctx.params[0];
+    if (_extensions.contains(watcher)) return;
     extensions.add(ctx.data);
     extensions.sort(ModularExtension._compare);
     if (mounted) setState(() {});
