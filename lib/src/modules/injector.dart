@@ -42,7 +42,7 @@ class UIInjector {
     watcher ??= Object();
     final channel = [path, identityHashCode(watcher)];
     mosaic.events.emit<ModularExtension>(
-      channel.join(mosaic.events.sep),
+      channel.join(mosaic.events.separator),
       extension,
       true,
     );

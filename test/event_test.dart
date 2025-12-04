@@ -539,7 +539,7 @@ void main() {
 
   group('Events - Custom Separator', () {
     test('should use custom separator', () {
-      final events = Events('.');
+      final events = Events(separator: '.');
       var triggered = false;
 
       events.on<String>('user.login', (_) => triggered = true);
@@ -551,7 +551,7 @@ void main() {
     });
 
     test('should handle wildcards with custom separator', () {
-      final events = Events(':');
+      final events = Events(separator: ':');
       var count = 0;
 
       events.on<String>('user:*:update', (_) => count++);

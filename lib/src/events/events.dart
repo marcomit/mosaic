@@ -33,7 +33,22 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:mosaic/exceptions.dart';
+import 'package:mosaic/src/events/policy/event_policy.dart';
+import 'package:mosaic/src/events/policy/identity_provider.dart';
 import 'package:mosaic/src/mosaic.dart';
+
+class EventMessage<T> {
+  EventMessage({
+    required this.channel,
+    required this.data,
+    required this.identity,
+    this.retained = false,
+  });
+  final String channel;
+  final T data;
+  final String identity;
+  final bool retained;
+}
 
 /// Contains information passed to a listener when an event is emitted.
 ///
@@ -49,7 +64,13 @@ import 'package:mosaic/src/mosaic.dart';
 /// ```
 class EventContext<T> {
   /// Creates a new event context.
-  const EventContext(this.data, this.name, this.params);
+  const EventContext({
+    required this.data,
+    required this.name,
+    required this.params,
+    required this.message,
+    required this.receiver,
+  });
 
   /// Data passed with the event, may be null.
   final T data;
@@ -59,6 +80,11 @@ class EventContext<T> {
 
   /// Parameters extracted from the path when using wildcards (`*` or `#`).
   final List<String> params;
+
+  /// Message object received
+  final EventMessage message;
+
+  final String receiver;
 
   @override
   String toString() =>
@@ -84,27 +110,30 @@ class EventContext<T> {
 /// ```
 class EventListener<T> {
   /// Creates a new event listener.
-  EventListener(this.path, this.callback);
+  EventListener(this._path, this._callback, this._identity);
 
   /// Channel representation as a list of segments.
-  final List<String> path;
+  final List<String> _path;
 
   /// Callback invoked when a matching event is emitted.
-  final EventCallback<T> callback;
+  final EventCallback<T> _callback;
+
+  /// Identity of the listener
+  final String _identity;
 
   /// Checks if a given channel matches this listener.
   ///
   /// Supports wildcards `*` and `#`.
   bool _verify(List<String> channel) {
-    if (path.isEmpty && channel.isEmpty) return true;
+    if (_path.isEmpty && channel.isEmpty) return true;
 
-    final len = min(channel.length, path.length);
+    final len = min(channel.length, _path.length);
     for (int i = 0; i < len; i++) {
-      if (path[i] == '#') return true;
-      if (path[i] == '*') continue;
-      if (channel[i] != path[i]) return false;
+      if (_path[i] == '#') return true;
+      if (_path[i] == '*') continue;
+      if (channel[i] != _path[i]) return false;
     }
-    return channel.length == path.length;
+    return channel.length == _path.length;
   }
 
   /// Extracts dynamic parameters from the event path
@@ -112,12 +141,12 @@ class EventListener<T> {
   List<String> _getParams(List<String> channel) {
     final List<String> params = [];
 
-    for (int i = 0; i < channel.length && i < path.length; i++) {
-      if (i >= path.length) break;
+    for (int i = 0; i < channel.length && i < _path.length; i++) {
+      if (i >= _path.length) break;
 
-      if (path[i] == '#') {
+      if (_path[i] == '#') {
         return [...params, ...channel.sublist(i)];
-      } else if (path[i] == '*') {
+      } else if (_path[i] == '*') {
         params.add(channel[i]);
       }
     }
@@ -125,7 +154,7 @@ class EventListener<T> {
   }
 
   @override
-  String toString() => 'EventListener(path: ${path.join('/')})';
+  String toString() => 'EventListener(path: ${_path.join('/')})';
 }
 
 /// Type for a callback function that receives an event context.
@@ -155,10 +184,23 @@ typedef EventCallback<T> = void Function(EventContext<T>);
 /// events.deafen(listener);
 /// ```
 class Events {
-  Events([this.sep = '/']);
+  Events({
+    String? separator,
+    EventIdentityProvider? identityProvider,
+    EventPolicy? defaultPolicy,
+  }) : _separator = separator ?? '/',
+       _identityProvider = identityProvider ?? AnonymousIdentityProvider(),
+       _defaultPolicy = defaultPolicy ?? EventPolicy.permissive();
+
+  /// Used to get the identity every time a [emit] or [on] functions are called
+  final EventIdentityProvider _identityProvider;
 
   /// Segment separator for channels (default: `/`).
-  String sep;
+  final String _separator;
+
+  final EventPolicy _defaultPolicy;
+  final Map<String, EventPolicy> _channelPolicies = {};
+  final Map<String, EventPolicy> _identityPolicies = {};
 
   String? _namespace;
   Events? _parent;
@@ -167,7 +209,9 @@ class Events {
   final Map<int, List<EventListener>> _selfFixedLengthListeners = {};
   final Map<String, List<EventListener>> _selfStaticListeners = {};
 
-  final Map<String, dynamic> _selfRetained = {};
+  final Map<String, EventMessage> _selfRetained = {};
+
+  String get separator => _separator;
 
   List<EventListener> get _globalListeners {
     if (_parent != null) return _parent!._globalListeners;
@@ -184,15 +228,23 @@ class Events {
     return _selfStaticListeners;
   }
 
-  Map<String, dynamic> get _retained {
+  Map<String, EventMessage> get _retained {
     if (_parent != null) return _parent!._retained;
     return _selfRetained;
+  }
+
+  void setChannelPolicy(String channel, EventPolicy policy) {
+    _channelPolicies[channel] = policy;
+  }
+
+  void setIdentityPolicy(String identity, EventPolicy policy) {
+    _identityPolicies[identity] = policy;
   }
 
   List<EventListener> _getMatchingListeners(List<String> path) {
     final listeners = <EventListener>[];
 
-    listeners.addAll(_staticListeners[path.join(sep)] ?? []);
+    listeners.addAll(_staticListeners[path.join(_separator)] ?? []);
 
     for (final listener in _fixedLengthListeners[path.length] ?? []) {
       if (listener._verify(path)) listeners.add(listener);
@@ -205,15 +257,15 @@ class Events {
   }
 
   void _registerListener(EventListener listener) {
-    if (listener.path.contains('#')) {
+    if (listener._path.contains('#')) {
       _globalListeners.add(listener);
-    } else if (listener.path.contains('*')) {
+    } else if (listener._path.contains('*')) {
       _fixedLengthListeners
-          .putIfAbsent(listener.path.length, () => [])
+          .putIfAbsent(listener._path.length, () => [])
           .add(listener);
     } else {
       _staticListeners
-          .putIfAbsent(listener.path.join(sep), () => [])
+          .putIfAbsent(listener._path.join(_separator), () => [])
           .add(listener);
     }
   }
@@ -242,10 +294,11 @@ class Events {
   EventListener<T> on<T>(String channel, EventCallback<T> callback) {
     final path = <String>[];
     if (_namespace != null) path.add(_namespace!);
-    path.addAll(channel.split(sep).where((s) => s.isNotEmpty).toList());
+    path.addAll(channel.split(_separator).where((s) => s.isNotEmpty).toList());
     if (channel.isEmpty) throw EventException('Channel cannot be empty');
 
-    final listener = EventListener<T>(path, callback);
+    final identity = _identityProvider.getCurrentIdentity();
+    final listener = EventListener<T>(path, callback, identity);
 
     _deliverRetainedEvents<T>(listener, channel);
     _registerListener(listener);
@@ -296,20 +349,22 @@ class Events {
 
   void _deliverRetainedEvents<T>(EventListener<T> listener, String channel) {
     for (final route in _retained.keys) {
-      final path = route.split(sep);
+      final path = route.split(_separator);
 
       if (!listener._verify(path)) continue;
 
       try {
-        final data = _retained[route];
+        final data = _retained[route]!;
         if (data is! T) continue;
         final context = EventContext<T>(
-          data,
-          channel,
-          listener._getParams(path),
+          data: data.data,
+          name: channel,
+          params: listener._getParams(path),
+          message: data,
+          receiver: listener._identity,
         );
 
-        listener.callback(context);
+        listener._callback(context);
       } catch (e) {
         mosaic.logger.error(
           'Error delivering retained event \'$route\' to listener: $e',
@@ -324,7 +379,7 @@ class Events {
   /// All listeners with matching patterns will receive the event.
   ///
   /// Parameters:
-  /// * [channel]: Channel path with segments separated by [sep]
+  /// * [channel]: Channel path with segments separated by [scep]
   /// * [data]: Optional data to pass to listeners
   /// * [retain]: Whether to retain this event for future listeners
   ///
@@ -350,16 +405,24 @@ class Events {
   ///   For this type of listener is O(n).
   void emit<T>(String channel, T data, [bool retain = false]) {
     if (_namespace != null) {
-      channel = _namespace! + sep + channel;
+      channel = _namespace! + _separator + channel;
     }
-    final path = channel.split(sep).where((s) => s.isNotEmpty).toList();
+    final path = channel.split(_separator).where((s) => s.isNotEmpty).toList();
 
     if (path.isEmpty) {
       throw EventException('Invalid channel after normalization');
     }
 
+    final sender = _identityProvider.getCurrentIdentity();
+    final message = EventMessage(
+      channel: channel,
+      data: data,
+      identity: sender,
+      retained: retain,
+    );
+
     if (retain) {
-      _retained[channel] = data;
+      _retained[channel] = message;
     }
 
     final listeners = _getMatchingListeners(path);
@@ -367,9 +430,11 @@ class Events {
     for (final listener in listeners) {
       try {
         final context = EventContext<T>(
-          data,
-          channel,
-          listener._getParams(path),
+          data: data,
+          name: channel,
+          params: listener._getParams(path),
+          message: message,
+          receiver: listener._identity,
         );
         if (listener is! EventListener<T>) {
           mosaic.logger.warning(
@@ -378,7 +443,7 @@ class Events {
           );
           continue;
         }
-        listener.callback(context);
+        listener._callback(context);
       } catch (e) {
         mosaic.logger.error('Error in event listener for \'$channel\': $e', [
           'events',
@@ -414,7 +479,7 @@ class Events {
     final event = Events();
     event._namespace = prefix;
     if (_namespace != null) {
-      event._namespace = '$_namespace$sep$prefix';
+      event._namespace = '$_namespace$_separator$prefix';
     }
     event._parent = _parent ?? this;
     return event;
@@ -431,16 +496,16 @@ class Events {
   /// events.deafen(listener);
   /// ```
   void deafen<T>(EventListener<T> listener) {
-    if (listener.path.contains('#')) {
+    if (listener._path.contains('#')) {
       _globalListeners.remove(listener);
-    } else if (listener.path.contains('*')) {
-      final list = _fixedLengthListeners[listener.path.length];
+    } else if (listener._path.contains('*')) {
+      final list = _fixedLengthListeners[listener._path.length];
       list?.remove(listener);
       if (list != null && list.isEmpty) {
-        _fixedLengthListeners.remove(listener.path.length);
+        _fixedLengthListeners.remove(listener._path.length);
       }
     } else {
-      final key = listener.path.join(sep);
+      final key = listener._path.join(_separator);
       final list = _staticListeners[key];
       list?.remove(listener);
       if (list != null && list.isEmpty) {

@@ -31,10 +31,11 @@
 
 import 'package:mosaic/mosaic.dart';
 import 'package:mosaic/src/dependency_injection/dependency_container.dart';
+import 'package:mosaic/src/events/policy/identity_provider.dart';
 
 class MosaicContainer with Injectable {
   MosaicContainer._internal() {
-    put(Events());
+    put(Events(identityProvider: MosaicIdentityProvider()));
     put(InternalRouter());
     put(Logger());
     put(Imc());

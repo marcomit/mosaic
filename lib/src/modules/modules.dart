@@ -30,6 +30,7 @@
 */
 
 import 'dart:async';
+import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mosaic/mosaic.dart';
@@ -60,6 +61,16 @@ enum ModuleLifecycleState {
 
   /// Module encountered an error and needs attention.
   error,
+}
+
+enum ModuleRelationship {
+  self(0),
+  dependencies(1),
+  graph(2),
+  unrelated(3);
+
+  const ModuleRelationship(this.value);
+  final int value;
 }
 
 /// Represents an entry in the module's internal navigation stack.
@@ -141,7 +152,8 @@ abstract class Module with Loggable, ImcCallable {
   /// **Parameters:**
   /// * [name] - Unique identifier for this module
   /// * [fullScreen] - Whether to display in full screen mode (coming soon...)
-  Module({required this.name, this.fullScreen = false}) {
+  Module({required this.name, this.fullScreen = false})
+    : events = mosaic.events.namespace(name) {
     info('Module $name created');
   }
 
@@ -179,7 +191,7 @@ abstract class Module with Loggable, ImcCallable {
   Object? get lastError => _lastError;
 
   /// Events prefixed by the module name
-  Events get events => mosaic.events.namespace(name);
+  final Events events;
 
   /// Unique identifier for this module.
   final String name;
@@ -214,6 +226,25 @@ abstract class Module with Loggable, ImcCallable {
   /// **Returns:** The root widget for this module
   Widget build(BuildContext context);
 
+  ModuleRelationship relationship(Module other) {
+    if (this == other) return ModuleRelationship.self;
+    if (dependencies.contains(other)) return ModuleRelationship.dependencies;
+
+    final queue = Queue<Module>();
+    queue.add(this);
+
+    while (queue.isNotEmpty) {
+      final node = queue.removeFirst();
+      if (node == other) return ModuleRelationship.graph;
+
+      for (final dependency in node.dependencies) {
+        queue.add(dependency);
+      }
+    }
+
+    return ModuleRelationship.unrelated;
+  }
+
   /// Transitions the module to a new lifecycle state.
   ///
   /// This method ensures thread-safe state transitions and proper logging.
@@ -229,7 +260,7 @@ abstract class Module with Loggable, ImcCallable {
     debug('Module $name: $oldState → $newState');
 
     mosaic.events.emit<ModuleLifecycleState>(
-      ['module', name, 'state_changed'].join(mosaic.events.sep),
+      'module/$name/state_changed',
       newState,
       true,
     );
@@ -434,7 +465,7 @@ abstract class Module with Loggable, ImcCallable {
   Future<T> push<T>(Widget widget) {
     final entry = InternalRoute(Completer<T>(), widget);
     _stack.add(entry);
-    mosaic.events.emit<String>(['router', 'push'].join(mosaic.events.sep), '');
+    mosaic.events.emit<String>('router/push', '');
     return entry.completer.future;
   }
 
@@ -451,7 +482,7 @@ abstract class Module with Loggable, ImcCallable {
   void pop<T>([T? value]) {
     if (_stack.isEmpty) return;
     final c = _stack.removeLast().completer;
-    mosaic.events.emit<String>(['router', 'pop'].join(mosaic.events.sep), '');
+    mosaic.events.emit<String>('router/pop', '');
     c.complete(value);
   }
 
@@ -462,7 +493,7 @@ abstract class Module with Loggable, ImcCallable {
   void clear() {
     while (_stack.isNotEmpty) {
       _stack.removeLast().completer.complete(null);
-      mosaic.events.emit<String>(['router', 'pop'].join(mosaic.events.sep), '');
+      mosaic.events.emit<String>('router/pop', '');
     }
   }
   // Lifecycle hooks - override these in subclasses

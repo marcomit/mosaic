@@ -197,6 +197,7 @@ class ModuleManager with Loggable {
   /// * [ArgumentError] if the module doesn't exist
   /// * [ModuleException] if activation fails
   Future<void> activateModule(Module module) async {
+    currentModule = module.name;
     if (module.state == ModuleLifecycleState.uninitialized) {
       await module.initialize();
     } else if (module.state == ModuleLifecycleState.suspended) {
@@ -211,15 +212,10 @@ class ModuleManager with Loggable {
       }
     }
 
-    currentModule = module.name;
-
     module.onActive(RouteTransitionContext(to: module));
     info('Activated module ${module.name}');
 
-    mosaic.events.emit<String>(
-      ['module_manager', 'module_activated'].join(mosaic.events.sep),
-      module.name,
-    );
+    mosaic.events.emit<String>('module_manager/module_activated', module.name);
   }
 
   /// Suspends a module without disposing it.

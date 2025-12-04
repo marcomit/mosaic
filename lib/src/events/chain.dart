@@ -65,7 +65,7 @@ abstract class Segment {
   /// segment.$('profile').$('update'); // Results in 'user/profile/update'
   /// ```
   Segment $(String data) {
-    if (topic.isNotEmpty) topic += mosaic.events.sep;
+    if (topic.isNotEmpty) topic += mosaic.events.separator;
     topic += data;
     return this;
   }
@@ -220,7 +220,7 @@ mixin Param on Segment {
   /// segment.params(['api', 'v1', 'users']); // 'base/api/v1/users'
   /// ```
   Segment params(List<String> params) {
-    topic = [topic, ...params].join(mosaic.events.sep);
+    topic = [topic, ...params].join(mosaic.events.separator);
     return this;
   }
 }
