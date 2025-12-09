@@ -100,23 +100,27 @@ class InternalRouter with Loggable {
   /// * [value] you can pass data through modules' transition
   ///
   /// If the router is disposed throws [RouterException]
-  Future<void> go<T>(String moduleName, [T? value]) async {
+  Future<T> go<T>(String moduleName, [dynamic value]) async {
     if (_disposed) {
       throw RouterException('Router was disposed');
     }
     await _navigation.lock();
+		Completer<T> completer = Completer();
     try {
       Module? from;
       if (_history.isNotEmpty) {
         from = _tryGetModule(_history.last.module);
       }
       _handleMaxHistoryEntries();
-      _history.add(RouteHistoryEntry(moduleName));
+			final historyEntry = RouteHistoryEntry<T>(moduleName);
+      _history.add(historyEntry);
 
       _goto(from: from, params: value);
+			completer = historyEntry.completer;
     } finally {
       _navigation.release();
     }
+		return completer.future;
   }
 
   void _validateModuleStatus(Module module) {
