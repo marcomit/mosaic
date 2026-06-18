@@ -40,6 +40,8 @@ class MosaicContainer with Injectable {
     put(Imc());
     put(ModuleManager());
     put(UIInjector());
+    put(FeatureFlags());
+    put(ContractRegistry());
   }
 
   Events get events => get<Events>();
@@ -47,6 +49,13 @@ class MosaicContainer with Injectable {
   Imc get imc => get<Imc>();
   ModuleManager get registry => get<ModuleManager>();
   UIInjector get injector => get<UIInjector>();
+
+  /// Runtime feature-flag store used for staged rollouts, A/B tests, and gating
+  /// lazy modules behind a flag.
+  FeatureFlags get features => get<FeatureFlags>();
+
+  /// Registry of typed module contracts (each module's public API surface).
+  ContractRegistry get contracts => get<ContractRegistry>();
 
   /// Global logger instance for application-wide logging.
   ///
@@ -67,6 +76,8 @@ mixin MosaicServices {
   Imc get imc => mosaic.imc;
   ModuleManager get registry => mosaic.registry;
   Logger get logger => mosaic.logger;
+  FeatureFlags get features => mosaic.features;
+  ContractRegistry get contracts => mosaic.contracts;
 }
 
 final mosaic = MosaicContainer._internal();

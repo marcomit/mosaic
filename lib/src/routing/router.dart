@@ -104,6 +104,12 @@ class InternalRouter with Loggable {
     if (_disposed) {
       throw RouterException('Router was disposed');
     }
+    // Bring lazily-registered or suspended modules online before navigating so
+    // navigation to a not-yet-loaded module "just works".
+    if (mosaic.registry.isRegistered(moduleName) &&
+        !mosaic.registry.isActive(moduleName)) {
+      await mosaic.registry.ensureActive(moduleName);
+    }
     await _navigation.lock();
     try {
       Module? from;

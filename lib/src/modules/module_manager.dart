@@ -33,6 +33,30 @@ import 'dart:async';
 
 import 'package:mosaic/mosaic.dart';
 
+/// Factory that lazily constructs a [Module] the first time it is needed.
+///
+/// May be synchronous or asynchronous, allowing deferred-import code splitting
+/// (`import '...' deferred as ...`) before the module instance is built.
+typedef ModuleFactory = FutureOr<Module> Function();
+
+/// Internal record describing a module that has been registered lazily but not
+/// yet constructed.
+class _LazyModule {
+  _LazyModule({
+    required this.name,
+    required this.factory,
+    required this.dependencies,
+    required this.provides,
+    this.gate,
+  });
+
+  final String name;
+  final ModuleFactory factory;
+  final List<String> dependencies;
+  final List<Type> provides;
+  final ModuleGate? gate;
+}
+
 /// Manages all modules in the application and provides centralized control
 /// over module lifecycle, error handling, and state management.
 class ModuleManager with Loggable {
@@ -47,7 +71,7 @@ class ModuleManager with Loggable {
   String? get currentModule => _currentModule;
 
   set currentModule(String? module) {
-    if (!_modules.containsKey(module)) {
+    if (module != null && !_modules.containsKey(module)) {
       throw ModuleException(
         'Invalid current module',
         cause:
@@ -61,6 +85,12 @@ class ModuleManager with Loggable {
   /// All registered modules (read-only view).
   final Map<String, Module> _modules = {};
 
+  /// Modules registered lazily, keyed by name, awaiting their first load.
+  final Map<String, _LazyModule> _lazy = {};
+
+  /// Names currently being loaded, used to detect lazy dependency cycles.
+  final Set<String> _loading = {};
+
   /// Name of the default module to use when none is specified.
   Module? get defaultModule => _defaultModule;
 
@@ -73,6 +103,22 @@ class ModuleManager with Loggable {
 
   /// Getter of all modules (unmodifiable)
   Map<String, Module> get modules => Map.unmodifiable(_modules);
+
+  /// Names of every registered module, whether eager or lazy.
+  Set<String> get registeredNames => {..._modules.keys, ..._lazy.keys};
+
+  /// Whether a module with [name] is known to the manager (eager or lazy).
+  bool isRegistered(String name) =>
+      _modules.containsKey(name) || _lazy.containsKey(name);
+
+  /// Whether [name] was registered lazily and has not been constructed yet.
+  bool isLazy(String name) => _lazy.containsKey(name);
+
+  /// Whether [name] has been constructed (its instance exists).
+  bool isLoaded(String name) => _modules.containsKey(name);
+
+  /// Whether [name] is loaded and currently in the active state.
+  bool isActive(String name) => _modules[name]?.active ?? false;
 
   /// The currently active module, if any.
   Module get current {
@@ -188,6 +234,157 @@ class ModuleManager with Loggable {
     info('Registered module ${module.name}');
   }
 
+  /// Registers a module lazily: it is not constructed or initialized until it
+  /// is first navigated to or explicitly [load]ed.
+  ///
+  /// This keeps startup cheap and lets large applications defer the cost of
+  /// rarely-used features. Combine with [gate] for feature-flagged or
+  /// remotely-controlled availability.
+  ///
+  /// **Parameters:**
+  /// * [name] - Unique identifier for the module (must match `Module.name`)
+  /// * [factory] - Builds the module instance on first use (may be async)
+  /// * [dependencies] - Names of modules that must be loaded & initialized first
+  /// * [provides] - Contract types this module exposes; declaring them lets
+  ///   [ContractRegistry.resolve] load this module on demand
+  /// * [gate] - Optional predicate; when it returns `false` the module is
+  ///   considered unavailable and [load] throws
+  ///
+  /// **Throws:**
+  /// * [ModuleException] if a module with the same name is already registered
+  ///
+  /// **Example:**
+  /// ```dart
+  /// mosaic.registry.registerLazy(
+  ///   'checkout',
+  ///   () => CheckoutModule(),
+  ///   dependencies: ['cart'],
+  ///   provides: [CheckoutContract],
+  ///   gate: mosaic.features.gate('new_checkout'),
+  /// );
+  /// ```
+  void registerLazy(
+    String name,
+    ModuleFactory factory, {
+    List<String> dependencies = const [],
+    List<Type> provides = const [],
+    ModuleGate? gate,
+  }) {
+    if (isRegistered(name)) {
+      throw ModuleException('Module $name is already registered');
+    }
+    _lazy[name] = _LazyModule(
+      name: name,
+      factory: factory,
+      dependencies: dependencies,
+      provides: provides,
+      gate: gate,
+    );
+    for (final type in provides) {
+      mosaic.contracts.declareLazyProviderType(type, name);
+    }
+    info('Registered lazy module $name');
+  }
+
+  /// Resolves whether a lazily-registered module is currently available.
+  ///
+  /// Evaluates the module's [ModuleGate] (if any). Already-loaded or eager
+  /// modules are always considered available.
+  Future<bool> isAvailable(String name) async {
+    final lazy = _lazy[name];
+    if (lazy?.gate == null) return isRegistered(name);
+    return lazy!.gate!();
+  }
+
+  /// Constructs, registers and initializes a lazily-registered module.
+  ///
+  /// Lazy dependencies are loaded first (depth-first, with cycle detection),
+  /// then the [ModuleGate] is evaluated, then the factory runs and the module
+  /// is initialized. If the module was already loaded it is returned as-is.
+  ///
+  /// **Throws:**
+  /// * [ModuleException] if [name] is not registered, is gated off, or a
+  ///   circular lazy dependency is detected
+  Future<Module> load(String name) async {
+    final existing = _modules[name];
+    if (existing != null) return existing;
+
+    final lazy = _lazy[name];
+    if (lazy == null) {
+      throw ModuleException(
+        'Cannot load module $name',
+        cause: 'No lazy registration found',
+        fix: 'Call registerLazy(\'$name\', ...) first',
+      );
+    }
+
+    if (_loading.contains(name)) {
+      throw ModuleException(
+        'Circular lazy dependency detected',
+        cause: 'While loading ${_loading.join(' -> ')} -> $name',
+        moduleName: name,
+      );
+    }
+
+    if (lazy.gate != null && !(await lazy.gate!())) {
+      throw ModuleException(
+        'Module $name is gated off',
+        cause: 'Its feature gate evaluated to false',
+        fix: 'Enable the backing feature flag before loading $name',
+        moduleName: name,
+      );
+    }
+
+    _loading.add(name);
+    try {
+      for (final dep in lazy.dependencies) {
+        await load(dep);
+      }
+
+      final module = await lazy.factory();
+      if (module.name != name) {
+        throw ModuleException(
+          'Lazy factory for $name produced module "${module.name}"',
+          cause: 'The constructed module name must match the registered name',
+          fix: 'Use the same name in registerLazy and the Module constructor',
+        );
+      }
+
+      _modules[name] = module;
+      _lazy.remove(name);
+      await module.initialize();
+      info('Lazily loaded module $name');
+      return module;
+    } finally {
+      _loading.remove(name);
+    }
+  }
+
+  /// Ensures a module is loaded and active, loading it lazily if required.
+  ///
+  /// Returns the active module instance. Used by the router to transparently
+  /// bring lazy modules online when they are navigated to.
+  ///
+  /// **Throws:**
+  /// * [ModuleException] if the module cannot be loaded or activated
+  Future<Module> ensureActive(String name) async {
+    if (!_modules.containsKey(name)) {
+      if (_lazy.containsKey(name)) {
+        await load(name);
+      } else {
+        throw ModuleException(
+          'Module $name is not registered',
+          fix: 'Register it with register() or registerLazy() first',
+        );
+      }
+    }
+    final module = _modules[name]!;
+    if (!module.active) {
+      await activateModule(module);
+    }
+    return module;
+  }
+
   /// Activates a module, making it the current active module.
   ///
   /// **Parameters:**
@@ -242,6 +439,8 @@ class ModuleManager with Loggable {
     await Future.wait(futures);
 
     _modules.clear();
+    _lazy.clear();
+    _loading.clear();
     currentModule = null;
     _defaultModule = null;
 

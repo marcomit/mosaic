@@ -94,3 +94,11 @@ class ImcException extends MosaicException {
   @override
   String get name => 'ImcException';
 }
+
+/// Exception thrown when a module contract cannot be resolved or is misused.
+class ContractException extends MosaicException {
+  ContractException(super.message, {super.fix, super.cause});
+
+  @override
+  String get name => 'ContractException';
+}

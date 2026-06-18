@@ -43,7 +43,11 @@ class MosaicScope extends StatefulWidget {
 class _MosaicScopeState extends State<MosaicScope>
     with Admissible, MosaicServices {
   int _currentIndex = -1;
-  List<Widget> modules = [];
+
+  /// Built root widgets cached by module name. Built on demand so that modules
+  /// activated after startup (e.g. lazily loaded ones) are picked up.
+  final Map<String, Widget> _built = {};
+
   String? get _currentModule => registry.currentModule;
 
   set _currentModule(String? value) {
@@ -67,10 +71,13 @@ class _MosaicScopeState extends State<MosaicScope>
     on<String>('router/push', _refresh);
     on<String>('router/pop', _refresh);
     on<RouteTransitionContext>('router/change/*', _changeRoute);
+    // Rebuild when a module is activated after startup (e.g. lazily loaded).
+    on<String>('module_manager/module_activated', _refresh);
+  }
 
-    for (final module in registry.activeModules.values) {
-      modules.add(module.build(context));
-    }
+  /// Returns the cached root widget for [module], building it on first access.
+  Widget _moduleWidget(Module module) {
+    return _built.putIfAbsent(module.name, () => module.build(context));
   }
 
   @override
@@ -112,14 +119,13 @@ class _MosaicScopeState extends State<MosaicScope>
     return Scaffold(
       body: IndexedStack(
         index: _currentModule == null ? 0 : _currentIndex + 1,
-        children: [defaultPage(), ...listModules.indexed.map(stack)],
+        children: [defaultPage(), ...listModules.map(stack)],
       ),
     );
   }
 
-  Widget stack((int, Module) tuple) {
-    final (index, module) = tuple;
-    final children = [modules[index], ...module.stack];
+  Widget stack(Module module) {
+    final children = [_moduleWidget(module), ...module.stack];
     if (children.isEmpty) return const SizedBox();
     return IndexedStack(index: children.length - 1, children: children);
   }

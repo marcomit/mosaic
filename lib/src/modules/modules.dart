@@ -181,6 +181,13 @@ abstract class Module with Loggable, ImcCallable {
   /// Events prefixed by the module name
   Events get events => mosaic.events.namespace(name);
 
+  /// Registry of typed module contracts.
+  ///
+  /// Use it to consume another module's public API
+  /// (`contracts.of<SomeContract>()`) or to expose your own from
+  /// [provideContracts].
+  ContractRegistry get contracts => mosaic.contracts;
+
   /// Unique identifier for this module.
   final String name;
 
@@ -191,6 +198,22 @@ abstract class Module with Loggable, ImcCallable {
   final List<InternalRoute> _stack = [];
 
   final List<Module> dependencies = [];
+
+  /// Contract types this module depends on to function.
+  ///
+  /// Before this module initializes, every type listed here must be provided by
+  /// another module. If a required contract is only available from a lazily
+  /// registered module (declared via `registerLazy(provides: ...)`), that
+  /// provider is loaded automatically. Otherwise initialization fails fast with
+  /// a [ContractException], turning a hidden runtime coupling into an explicit,
+  /// enforced boundary.
+  ///
+  /// **Example:**
+  /// ```dart
+  /// @override
+  /// List<Type> get requiredContracts => [AuthContract];
+  /// ```
+  List<Type> get requiredContracts => const [];
 
   /// Current navigation stack as an iterable of widgets.
   ///
@@ -213,6 +236,27 @@ abstract class Module with Loggable, ImcCallable {
   ///
   /// **Returns:** The root widget for this module
   Widget build(BuildContext context);
+
+  /// Validates that every contract in [requiredContracts] is available,
+  /// loading lazily-registered provider modules on demand.
+  Future<void> _ensureRequiredContracts() async {
+    for (final type in requiredContracts) {
+      if (mosaic.contracts.isProvidedType(type)) continue;
+
+      final provider = mosaic.contracts.lazyProviderFor(type);
+      if (provider != null && provider != name) {
+        await mosaic.registry.ensureActive(provider);
+      }
+
+      if (!mosaic.contracts.isProvidedType(type)) {
+        throw ContractException(
+          'Module $name requires contract $type which is not provided',
+          cause: 'No active module exposes $type',
+          fix: 'Activate a module that provides $type before $name',
+        );
+      }
+    }
+  }
 
   /// Transitions the module to a new lifecycle state.
   ///
@@ -250,7 +294,9 @@ abstract class Module with Loggable, ImcCallable {
 
     try {
       info('Initializing module $name');
+      await _ensureRequiredContracts();
       await onInit();
+      provideContracts(mosaic.contracts);
       await _transitionTo(ModuleLifecycleState.active);
       info('Module $name initialized successfully');
     } catch (e) {
@@ -334,6 +380,8 @@ abstract class Module with Loggable, ImcCallable {
       clear();
 
       await onDispose();
+
+      mosaic.contracts.revokeByProvider(name);
 
       di.clear();
 
@@ -477,6 +525,21 @@ abstract class Module with Loggable, ImcCallable {
   ///
   /// **Throws:** Any exception to indicate initialization failure
   FutureOr<void> onInit() async {}
+
+  /// Exposes this module's typed public API to the rest of the application.
+  ///
+  /// Override to register one or more [ModuleContract]s. Called automatically
+  /// after [onInit] succeeds; the contracts are revoked when the module is
+  /// disposed, so consumers can never hold a reference to a dead module.
+  ///
+  /// **Example:**
+  /// ```dart
+  /// @override
+  /// void provideContracts(ContractRegistry contracts) {
+  ///   contracts.provide<AuthContract>(_AuthApi(this), provider: name);
+  /// }
+  /// ```
+  void provideContracts(ContractRegistry contracts) {}
 
   /// Called when the module becomes active.
   ///

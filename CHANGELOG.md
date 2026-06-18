@@ -59,3 +59,10 @@
 
 ## 1.0.10
 - Fixed bug 'nc'
+
+## 1.1.0
+- Added lazy / dynamic module loading (`registry.registerLazy`, `load`, `ensureActive`) with depth-first lazy dependency resolution and cycle detection.
+- Modules are now loaded transparently when navigated to via `router.go`.
+- Introduced a reactive feature-flag store (`mosaic.features`) with local overrides and async remote resolvers; flags can gate lazy modules.
+- Introduced Module Contracts (`mosaic.contracts`): typed public APIs provided/revoked over the module lifecycle, with `requiredContracts` boundary enforcement and lazy provider auto-loading.
+- Fixed `ModuleManager.currentModule` setter throwing when cleared to `null`.

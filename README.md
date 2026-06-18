@@ -14,6 +14,10 @@ Mosaic is a comprehensive Flutter architecture framework designed for building s
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Module Lifecycle](#module-lifecycle)
+- [Lazy Modules & Feature Flags](#lazy-modules--feature-flags)
+  - [Feature Flags](#feature-flags)
+- [Module Contracts](#module-contracts)
+  - [Enforced boundaries](#enforced-boundaries)
 - [Event System](#event-system)
   - [Basic Events](#basic-events)
   - [Wildcard Patterns](#wildcard-patterns)
@@ -280,6 +284,122 @@ class MyModule extends Module {
     return true; // Return false to prevent recovery
   }
 }
+```
+
+## Lazy Modules & Feature Flags
+
+Modules can be registered lazily so they are only constructed and initialized
+the first time they are needed — navigated to, explicitly loaded, or pulled in
+as a dependency. This keeps startup cheap and lets large apps defer the cost of
+rarely-used features.
+
+```dart
+// Registered, but NOT constructed yet.
+mosaic.registry.registerLazy(
+  'checkout',
+  () => CheckoutModule(),        // built on first use (may be async)
+  dependencies: ['cart'],        // loaded & initialized first
+);
+
+// Navigating to it loads it transparently:
+await mosaic.router.go('checkout');
+
+// Or load it explicitly:
+await mosaic.registry.load('checkout');
+```
+
+Lazy dependencies are resolved depth-first with cycle detection, and the
+async factory makes Flutter deferred imports (`import '...' deferred as ...`)
+straightforward for web code-splitting.
+
+### Feature Flags
+
+A reactive feature-flag store powers staged rollouts, A/B tests, and
+kill-switches. Flags can be set locally or fetched from remote sources, and used
+to **gate** a lazy module so it never even gets constructed while disabled.
+
+```dart
+// Local override (e.g. from a debug menu)
+mosaic.features.enable('new_checkout');
+
+// Remote source consulted on demand; return null to defer to the next source
+mosaic.features.addResolver((key) async => await remoteConfig.getBool(key));
+
+// Gate a lazy module behind a flag
+mosaic.registry.registerLazy(
+  'checkout',
+  () => CheckoutModule(),
+  gate: mosaic.features.gate('new_checkout'),
+);
+
+// A gated-off module fails fast with a descriptive ModuleException:
+await mosaic.registry.isAvailable('checkout'); // false while the flag is off
+```
+
+`isEnabled` reads local overrides synchronously; `resolve` additionally consults
+async resolvers in registration order before falling back to the default.
+
+## Module Contracts
+
+Contracts are a module's **typed public API**. Consumers depend on the contract
+interface, never on the concrete module class — so modules stay independently
+replaceable and one module can't reach into another's internals. Contracts are
+registered when their providing module activates and revoked when it is
+disposed, so a consumer can never hold a reference to a dead module.
+
+```dart
+// 1. Define the contract (a pure interface).
+abstract class AuthContract extends ModuleContract {
+  Future<bool> isLoggedIn();
+  Future<void> logout();
+}
+
+// 2. Provide it from the owning module.
+class AuthModule extends Module {
+  AuthModule() : super(name: 'auth');
+
+  @override
+  void provideContracts(ContractRegistry contracts) {
+    contracts.provide<AuthContract>(_AuthApi(), provider: name);
+  }
+  // ...
+}
+
+// 3. Consume it from anywhere — no dependency on AuthModule.
+final auth = mosaic.contracts.of<AuthContract>();
+if (await auth.isLoggedIn()) { /* ... */ }
+```
+
+### Enforced boundaries
+
+A module can declare the contracts it **requires**. Before it initializes, every
+required contract must be available — otherwise initialization fails fast with a
+`ContractException`, turning a hidden runtime coupling into an explicit,
+enforced boundary.
+
+```dart
+class ProfileModule extends Module {
+  ProfileModule() : super(name: 'profile');
+
+  @override
+  List<Type> get requiredContracts => [AuthContract];
+  // ...
+}
+```
+
+When the provider of a required contract is a **lazy** module, declare what it
+provides and Mosaic will load it automatically the first time the contract is
+needed:
+
+```dart
+mosaic.registry.registerLazy(
+  'auth',
+  () => AuthModule(),
+  provides: [AuthContract],
+);
+
+// Triggers lazy-loading of AuthModule, then returns its contract:
+final auth = await mosaic.contracts.resolve<AuthContract>();
 ```
 
 ## Event System

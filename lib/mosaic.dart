@@ -32,6 +32,7 @@ library;
 
 export 'extensions.dart';
 export 'exceptions.dart';
+export 'src/contracts/exports.dart';
 export 'src/dependency_injection/dependency_injector.dart';
 export 'src/events/exports.dart';
 export 'src/imc/imc.dart';
