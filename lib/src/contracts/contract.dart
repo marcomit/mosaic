@@ -68,6 +68,45 @@ import 'package:mosaic/mosaic.dart';
 /// ```
 abstract class ModuleContract {}
 
+/// Mixin that routes a contract's calls through the IMC middleware chain.
+///
+/// Contracts are the *typed public surface* of a module; IMC is the
+/// *cross-cutting transport* (auth, logging, validation middleware). Mix this in
+/// when a contract's methods should pass through that middleware instead of
+/// calling module internals directly.
+///
+/// The provider registers IMC handlers under [channel] (typically the module
+/// name) and the contract's typed methods delegate to [dispatch], so every
+/// registered middleware on the channel runs.
+///
+/// ```dart
+/// class _AuthApi extends ModuleContract
+///     with MiddlewareContract
+///     implements AuthContract {
+///   @override
+///   String get channel => 'auth';
+///
+///   @override
+///   Future<bool> login(Credentials c) => dispatch('login', c);
+/// }
+///
+/// // In the providing module:
+/// register('login', (ctx) => _doLogin(ctx.data)); // ImcCallable, channel 'auth'
+/// ```
+mixin MiddlewareContract on ModuleContract {
+  /// IMC namespace this contract dispatches through (usually the module name).
+  String get channel;
+
+  /// Invokes [action] under [channel] through the IMC middleware chain.
+  Future<R> dispatch<R>(String action, [dynamic params]) async {
+    final result = await mosaic.imc(
+      [channel, action].join(mosaic.imc.separator),
+      params,
+    );
+    return result as R;
+  }
+}
+
 /// Central registry that maps a [ModuleContract] type to its live provider.
 ///
 /// The registry enforces module boundaries at runtime:

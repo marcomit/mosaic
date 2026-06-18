@@ -29,11 +29,29 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+import 'package:flutter/widgets.dart';
 import 'package:mosaic/mosaic.dart';
 import 'package:mosaic/src/dependency_injection/dependency_container.dart';
 
+/// Root container that wires together every Mosaic subsystem (events, router,
+/// IMC, module registry, DI, feature flags, contracts, logger).
+///
+/// The global [mosaic] instance is the default *root scope* and is what every
+/// subsystem resolves against internally. Application code is encouraged to
+/// reach the container through [MosaicContainer.of] (backed by [MosaicProvider])
+/// rather than the hard global reference, which decouples widgets from the
+/// global and makes future per-scope isolation a drop-in change.
 class MosaicContainer with Injectable {
-  MosaicContainer._internal() {
+  /// Creates an independent container with a fresh set of subsystems.
+  ///
+  /// Useful in tests that want an isolated instance. Note that subsystems still
+  /// resolve cross-references (e.g. router → events) against the [mosaic] root
+  /// scope today; full per-scope subsystem isolation is planned.
+  MosaicContainer() {
+    _register();
+  }
+
+  void _register() {
     put(Events());
     put(InternalRouter());
     put(Logger());
@@ -42,6 +60,24 @@ class MosaicContainer with Injectable {
     put(UIInjector());
     put(FeatureFlags());
     put(ContractRegistry());
+    put<MosaicStorage>(InMemoryStorage());
+  }
+
+  /// Rebuilds every subsystem from scratch, discarding all state.
+  ///
+  /// Intended for test `tearDown`/`setUp` to guarantee isolation between tests
+  /// that share the [mosaic] root scope.
+  void reset() {
+    clear();
+    _register();
+  }
+
+  /// Resolves the nearest [MosaicContainer] from the widget tree, falling back
+  /// to the global [mosaic] root scope when no [MosaicProvider] is present.
+  static MosaicContainer of(BuildContext context) {
+    final provider =
+        context.dependOnInheritedWidgetOfExactType<MosaicProvider>();
+    return provider?.container ?? mosaic;
   }
 
   Events get events => get<Events>();
@@ -56,6 +92,11 @@ class MosaicContainer with Injectable {
 
   /// Registry of typed module contracts (each module's public API surface).
   ContractRegistry get contracts => get<ContractRegistry>();
+
+  /// Key/value storage backend used by the persistence layer (the [Persistable]
+  /// mixin). Defaults to [InMemoryStorage]; override with
+  /// `mosaic.override<MosaicStorage>(impl)`.
+  MosaicStorage get storage => get<MosaicStorage>();
 
   /// Global logger instance for application-wide logging.
   ///
@@ -78,6 +119,34 @@ mixin MosaicServices {
   Logger get logger => mosaic.logger;
   FeatureFlags get features => mosaic.features;
   ContractRegistry get contracts => mosaic.contracts;
+  MosaicStorage get storage => mosaic.storage;
 }
 
-final mosaic = MosaicContainer._internal();
+/// The default root [MosaicContainer] scope used throughout the application.
+final mosaic = MosaicContainer();
+
+/// Provides a [MosaicContainer] to a widget subtree.
+///
+/// Wrap your app (or a subtree) to make `MosaicContainer.of(context)` resolve to
+/// a specific container instead of the global [mosaic] root scope:
+///
+/// ```dart
+/// MosaicProvider(
+///   container: myScopedContainer,
+///   child: MosaicScope(),
+/// );
+/// ```
+class MosaicProvider extends InheritedWidget {
+  const MosaicProvider({
+    super.key,
+    required this.container,
+    required super.child,
+  });
+
+  /// The container exposed to descendants.
+  final MosaicContainer container;
+
+  @override
+  bool updateShouldNotify(MosaicProvider oldWidget) =>
+      container != oldWidget.container;
+}

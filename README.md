@@ -341,6 +341,11 @@ async resolvers in registration order before falling back to the default.
 
 ## Module Contracts
 
+> Unsure which messaging primitive to use? See
+> [Choosing a communication primitive](doc/communication.md):
+> **Event** to announce, **Contract** to ask, **IMC** to intercept,
+> **Signal** to remember.
+
 Contracts are a module's **typed public API**. Consumers depend on the contract
 interface, never on the concrete module class — so modules stay independently
 replaceable and one module can't reach into another's internals. Contracts are

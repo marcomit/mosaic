@@ -75,7 +75,39 @@ class _ConsumerModule extends Module {
   Widget build(BuildContext context) => const SizedBox();
 }
 
+abstract class CalcContract extends ModuleContract {
+  Future<int> add(int x);
+}
+
+class _CalcApi extends ModuleContract
+    with MiddlewareContract
+    implements CalcContract {
+  @override
+  String get channel => 'calc';
+
+  @override
+  Future<int> add(int x) => dispatch('add', x);
+}
+
 void main() {
+  group('MiddlewareContract', () {
+    test('dispatches through the IMC middleware chain', () async {
+      final calls = <String>[];
+      // Middleware on the channel runs before the handler.
+      mosaic.imc.register('calc', (ctx) => calls.add('middleware'));
+      mosaic.imc.register('calc.add', (ctx) {
+        calls.add('handler');
+        return (ctx.data as int) + 1;
+      });
+
+      final api = _CalcApi();
+      final result = await api.add(41);
+
+      expect(result, 42);
+      expect(calls, ['middleware', 'handler']);
+    });
+  });
+
   group('ContractRegistry', () {
     late ContractRegistry registry;
     setUp(() => registry = ContractRegistry());

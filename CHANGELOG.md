@@ -66,3 +66,17 @@
 - Introduced a reactive feature-flag store (`mosaic.features`) with local overrides and async remote resolvers; flags can gate lazy modules.
 - Introduced Module Contracts (`mosaic.contracts`): typed public APIs provided/revoked over the module lifecycle, with `requiredContracts` boundary enforcement and lazy provider auto-loading.
 - Fixed `ModuleManager.currentModule` setter throwing when cleared to `null`.
+- Fixed `DependencyInjector`: `lazy()` now caches the instance after first access (previously rebuilt on every `get`); `factory()`/`lazy()` doc comments corrected; `instances` now returns resolved objects instead of builder closures.
+- Fixed `Injectable.lazy` registering the builder closure as a singleton instead of a lazy dependency.
+- `Signal.notify` no longer silently swallows listener errors; they are forwarded to the current zone's error handler.
+
+## 1.2.0
+- **Communication guidance:** added a "choosing a communication primitive" guide and `MiddlewareContract`, which routes typed contract calls through the IMC middleware chain.
+- **Scoped container:** `MosaicContainer` is now instantiable with `MosaicProvider` / `MosaicContainer.of(context)` and a `reset()` for test isolation; the global `mosaic` remains the default root scope.
+- **Navigator 2.0 routing (opt-in):** `MosaicRouterDelegate` + `MosaicRouteInformationParser` render the module history as real `Navigator` pages with URL/deep-link sync, system back, and transitions. `Module.fullScreen` now presents the page as a full-screen dialog.
+- **DI enhancements:** named/qualified bindings (`name:`), async providers (`putAsync`/`getAsync`).
+- **State persistence:** `MosaicStorage` backend (default `InMemoryStorage`) + `Persistable` mixin with debounced save and rehydrate-on-init, built on signals.
+- **Runtime inspector:** `MosaicInspector` panel + `MosaicInspectorOverlay` showing module states, contracts, feature flags, and a live event log.
+- **Lifecycle policy:** `LifecyclePolicy` auto-suspends modules outside a recency window and suspends/resumes on app background/foreground; added `ModuleManager.resumeModule`.
+- **Typed event channels:** optional `EventChannel<T>` descriptors for compile-time-checked emit/listen, alongside the existing string API.
+- Removed a stale lint reference (`avoid_returning_null_for_future`) so the package analyzes clean.

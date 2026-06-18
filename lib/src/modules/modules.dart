@@ -140,7 +140,9 @@ abstract class Module with Loggable, ImcCallable {
   ///
   /// **Parameters:**
   /// * [name] - Unique identifier for this module
-  /// * [fullScreen] - Whether to display in full screen mode (coming soon...)
+  /// * [fullScreen] - When rendered by [MosaicRouterDelegate], present the
+  ///   module page as a full-screen dialog (bottom-up transition, no implicit
+  ///   back button).
   Module({required this.name, this.fullScreen = false}) {
     info('Module $name created');
   }
@@ -191,7 +193,8 @@ abstract class Module with Loggable, ImcCallable {
   /// Unique identifier for this module.
   final String name;
 
-  /// Whether this module should be displayed in full screen mode.
+  /// Whether this module's page is presented as a full-screen dialog by
+  /// [MosaicRouterDelegate].
   final bool fullScreen;
 
   /// Internal navigation stack for this module.

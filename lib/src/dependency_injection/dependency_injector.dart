@@ -54,35 +54,44 @@ import '../../exceptions.dart';
 /// final client = di.get<HttpClient>(); // New instance each time
 /// final expensive = di.get<ExpensiveService>(); // Created on first access
 /// ```
+/// Composite key for a registration: the dependency type plus an optional
+/// [name] qualifier, so multiple instances of the same type can coexist.
+typedef _Key = (Type, String?);
+
 class DependencyInjector {
-  final Map<Type, Function()> _instances = {};
+  /// Eagerly-provided singletons ([put]) and resolved lazy/async singletons.
+  final Map<_Key, Object> _singletons = {};
 
-  final Map<Type, Object Function()> _toLazy = {};
-  final Map<Type, Object> _cached = {};
+  /// Transient builders ([factory]) invoked on every [get].
+  final Map<_Key, Object Function()> _factories = {};
 
-  List<Object> get instances {
-    final List<Object> result = [];
-    final Set<Type> seen = {};
-    for (final entry in _instances.entries) {
-      seen.add(entry.key);
-      result.add(entry.value);
-    }
-    for (final entry in _cached.entries) {
-      if (seen.contains(entry.key)) continue;
-      result.add(entry.value);
-    }
-    return result;
-  }
+  /// Lazy-singleton builders ([lazy]) invoked once, then promoted to
+  /// [_singletons] and removed from here.
+  final Map<_Key, Object Function()> _lazyBuilders = {};
 
-  /// Checks if a dependency type is already registered in the given map.
+  /// Async singleton builders ([putAsync]) resolved by [getAsync], then
+  /// promoted to [_singletons].
+  final Map<_Key, Future<Object> Function()> _asyncBuilders = {};
+
+  /// All currently-instantiated objects: eager singletons plus any lazy or
+  /// async singletons that have been resolved.
   ///
-  /// Throws [DependencyException] if the type [T] already exists.
-  void _checkIfAbsent<T extends Object>(Map<Type, Function()> map) {
-    if (!map.containsKey(T)) return;
-    throw DependencyException(
-      'Dependency $T already registered',
-      fix: 'If you want to replace consider the use of override<T>()',
-    );
+  /// Transient ([factory]) registrations and not-yet-resolved [lazy]/[putAsync]
+  /// registrations are not included because no instance exists for them.
+  List<Object> get instances => List.unmodifiable(_singletons.values);
+
+  /// Throws [DependencyException] if `(T, name)` is already registered.
+  void _assertAbsent<T extends Object>(String? name) {
+    final key = (T, name);
+    if (_singletons.containsKey(key) ||
+        _factories.containsKey(key) ||
+        _lazyBuilders.containsKey(key) ||
+        _asyncBuilders.containsKey(key)) {
+      throw DependencyException(
+        'Dependency $T${name == null ? '' : ' (name: $name)'} already registered',
+        fix: 'If you want to replace consider the use of override<T>()',
+      );
+    }
   }
 
   /// Registers a singleton instance that will be returned every time [get] is called.
@@ -99,37 +108,18 @@ class DependencyInjector {
   /// final service1 = di.get<UserService>(); // Same instance
   /// final service2 = di.get<UserService>(); // Same instance (service1 == service2)
   /// ```
-  void put<T extends Object>(T instance) {
-    _checkIfAbsent<T>(_instances);
-    _checkIfAbsent<T>(_toLazy);
-    _instances[T] = () => instance;
+  /// Optionally pass [name] to register a *qualified* instance, allowing
+  /// several registrations of the same type (e.g. two `HttpClient`s).
+  void put<T extends Object>(T instance, {String? name}) {
+    _assertAbsent<T>(name);
+    _singletons[(T, name)] = instance;
   }
 
-  /// Registers a lazy builder that will cache the result only the first time [get] is called.
+  /// Registers a factory function that returns a new instance every time
+  /// [get] is called.
   ///
-  /// The [builder] function is called only once, on the first call to [get<T>()].
-  /// Subsequent calls return the cached instance. This is ideal for expensive-to-create
-  /// services that should be singletons but don't need to be created immediately.
-  ///
-  /// Throws [DependencyException] if [T] is already registered.
-  /// Use [override] if you need to replace an existing dependency.
-  ///
-  /// Example:
-  /// ```dart
-  /// di.lazy<DatabaseConnection>(() => DatabaseConnection.connect());
-  /// final conn1 = di.get<DatabaseConnection>(); // Creates and caches
-  /// final conn2 = di.get<DatabaseConnection>(); // Returns cached (conn1 == conn2)
-  /// ```
-  void factory<T extends Object>(T Function() builder) {
-    _checkIfAbsent<T>(_instances);
-    _checkIfAbsent<T>(_toLazy);
-    _instances[T] = builder;
-  }
-
-  /// Registers a factory function that will return a new instance every time [get] is called.
-  ///
-  /// A new instance will be created on every call to [get<T>()].
-  /// This is ideal for stateless services or when you need fresh instances.
+  /// A new instance will be created on every call to [get<T>()]. This is ideal
+  /// for stateless services or when you need fresh instances.
   ///
   /// Throws [DependencyException] if [T] is already registered.
   /// Use [override] if you need to replace an existing dependency.
@@ -140,29 +130,70 @@ class DependencyInjector {
   /// final client1 = di.get<HttpClient>(); // New instance
   /// final client2 = di.get<HttpClient>(); // Different instance (client1 != client2)
   /// ```
-  void lazy<T extends Object>(T Function() builder) {
-    _checkIfAbsent(_toLazy);
-    _checkIfAbsent<T>(_toLazy);
-    _toLazy[T] = builder;
+  void factory<T extends Object>(T Function() builder, {String? name}) {
+    _assertAbsent<T>(name);
+    _factories[(T, name)] = builder;
   }
 
-  /// Replaces an existing dependency with a new instance.
+  /// Registers a lazy builder whose result is cached after the first [get].
   ///
-  /// This method bypasses the duplicate registration check and replaces
-  /// any existing registration for type [T]. Useful for testing scenarios
-  /// or when you need to update dependencies at runtime.
+  /// The [builder] is called only once, on the first call to [get<T>()].
+  /// Subsequent calls return the cached instance. Ideal for expensive-to-create
+  /// services that should be singletons but need not be created immediately.
   ///
-  /// Note: This only affects future calls to [get<T>()]. If the dependency
-  /// was registered with [lazy] and already cached, you may need to call
-  /// [remove<T>()] first to clear the cache.
+  /// Throws [DependencyException] if [T] is already registered.
+  /// Use [override] if you need to replace an existing dependency.
+  ///
+  /// Example:
+  /// ```dart
+  /// di.lazy<DatabaseConnection>(() => DatabaseConnection.connect());
+  /// final conn1 = di.get<DatabaseConnection>(); // Creates and caches
+  /// final conn2 = di.get<DatabaseConnection>(); // Returns cached (conn1 == conn2)
+  /// ```
+  void lazy<T extends Object>(T Function() builder, {String? name}) {
+    _assertAbsent<T>(name);
+    _lazyBuilders[(T, name)] = builder;
+  }
+
+  /// Registers an asynchronous singleton builder, resolved on the first
+  /// [getAsync] call and cached thereafter.
+  ///
+  /// Ideal for dependencies whose creation is inherently async (opening a
+  /// database, loading a config file). Resolve it with [getAsync]; once
+  /// resolved it is also reachable through the synchronous [get].
+  ///
+  /// Throws [DependencyException] if `(T, name)` is already registered.
+  ///
+  /// Example:
+  /// ```dart
+  /// di.putAsync<Database>(() => Database.open());
+  /// final db = await di.getAsync<Database>(); // opens once, then cached
+  /// ```
+  void putAsync<T extends Object>(
+    Future<T> Function() builder, {
+    String? name,
+  }) {
+    _assertAbsent<T>(name);
+    _asyncBuilders[(T, name)] = builder;
+  }
+
+  /// Replaces any existing registration for type [T] with a new singleton.
+  ///
+  /// This bypasses the duplicate registration check and removes any prior
+  /// singleton, factory, or lazy registration for [T]. Useful for testing or
+  /// runtime swaps.
   ///
   /// Example:
   /// ```dart
   /// di.put<ApiService>(ProductionApiService());
   /// di.override<ApiService>(MockApiService()); // Replace for testing
   /// ```
-  void override<T extends Object>(T instance) {
-    _instances[T] = () => instance;
+  void override<T extends Object>(T instance, {String? name}) {
+    final key = (T, name);
+    _factories.remove(key);
+    _lazyBuilders.remove(key);
+    _asyncBuilders.remove(key);
+    _singletons[key] = instance;
   }
 
   /// Checks if a dependency of type [T] is registered in this container.
@@ -179,11 +210,12 @@ class DependencyInjector {
   ///   // Handle missing dependency
   /// }
   /// ```
-  bool contains<T>() {
-    if (_toLazy.containsKey(T)) return true;
-    if (_cached.containsKey(T)) return true;
-    if (_instances.containsKey(T)) return true;
-    return false;
+  bool contains<T>({String? name}) {
+    final key = (T, name);
+    return _singletons.containsKey(key) ||
+        _factories.containsKey(key) ||
+        _lazyBuilders.containsKey(key) ||
+        _asyncBuilders.containsKey(key);
   }
 
   /// Clears all registered dependencies and cached instances.
@@ -200,9 +232,10 @@ class DependencyInjector {
   /// di.clear();
   /// ```
   void clear() {
-    _instances.clear();
-    _toLazy.clear();
-    _cached.clear();
+    _singletons.clear();
+    _factories.clear();
+    _lazyBuilders.clear();
+    _asyncBuilders.clear();
   }
 
   /// Returns the dependency instance for type [T].
@@ -220,26 +253,62 @@ class DependencyInjector {
   /// final userService = di.get<UserService>();
   /// final httpClient = di.get<HttpClient>();
   /// ```
-  T get<T extends Object>() {
-    if (_toLazy.containsKey(T)) {
-      _cached[T] = _toLazy[T]!();
-      return _cached[T]! as T;
+  T get<T extends Object>({String? name}) {
+    final key = (T, name);
+
+    final singleton = _singletons[key];
+    if (singleton != null) return singleton as T;
+
+    final lazyBuilder = _lazyBuilders[key];
+    if (lazyBuilder != null) {
+      final instance = lazyBuilder();
+      _singletons[key] = instance;
+      _lazyBuilders.remove(key);
+      return instance as T;
     }
 
-    if (_instances.containsKey(T)) {
-      return _instances[T]!();
-    }
+    final factory = _factories[key];
+    if (factory != null) return factory() as T;
 
     throw DependencyException(
-      'Dependency $T does not exists in this container. ',
-      fix: 'Try to use put<$T>() before calling it.',
+      'Dependency $T${name == null ? '' : ' (name: $name)'} does not exists in this container. ',
+      fix: _asyncBuilders.containsKey(key)
+          ? 'It is registered asynchronously; resolve it with getAsync<$T>().'
+          : 'Try to use put<$T>() before calling it.',
     );
+  }
+
+  /// Resolves an asynchronous singleton registered with [putAsync].
+  ///
+  /// Returns the cached instance if already resolved (or registered eagerly).
+  /// Otherwise runs the async builder once, caches the result, and returns it.
+  ///
+  /// Throws [DependencyException] if no registration exists for `(T, name)`.
+  Future<T> getAsync<T extends Object>({String? name}) async {
+    final key = (T, name);
+
+    final existing = _singletons[key];
+    if (existing != null) return existing as T;
+
+    final builder = _asyncBuilders[key];
+    if (builder == null) {
+      throw DependencyException(
+        'Async dependency $T${name == null ? '' : ' (name: $name)'} is not registered.',
+        fix: 'Register it with putAsync<$T>() first.',
+      );
+    }
+
+    final instance = await builder();
+    _singletons[key] = instance;
+    _asyncBuilders.remove(key);
+    return instance as T;
   }
 
   /// Removes the dependency registration for type [T].
   ///
-  /// This removes the dependency from all internal maps (instances, lazy builders, and cache).
-  /// If the dependency was not registered, logs a warning instead of throwing an exception.
+  /// This removes the dependency from all internal maps (singletons, factories,
+  /// and lazy builders). If the dependency was not registered, logs a warning
+  /// instead of throwing an exception.
   ///
   /// After removal, calls to [get<T>()] will throw [DependencyException] until
   /// the dependency is registered again.
@@ -249,10 +318,12 @@ class DependencyInjector {
   /// di.remove<UserService>(); // Remove registration
   /// // di.get<UserService>(); // Would throw DependencyException
   /// ```
-  void remove<T>() {
-    bool res = _removeIfPresent<T>(_toLazy);
-    res |= _removeIfPresent<T>(_cached);
-    res |= _removeIfPresent<T>(_instances);
+  void remove<T>({String? name}) {
+    final key = (T, name);
+    bool res = _singletons.remove(key) != null;
+    res |= _factories.remove(key) != null;
+    res |= _lazyBuilders.remove(key) != null;
+    res |= _asyncBuilders.remove(key) != null;
     if (!res) {
       mosaic.logger.warning(
         'Trying to remove $T but is not a registered dependency',
@@ -261,16 +332,11 @@ class DependencyInjector {
     }
   }
 
-  /// Helper method to remove a type from a map if it exists.
-  ///
-  /// Returns `true` if the type was found and removed, `false` otherwise.
-  bool _removeIfPresent<T>(Map<Type, Object> map) => map.remove(T) != null;
-
   /// It is the equivalent to call [get]
   ///
   /// Example:
   /// ```dart
   /// final userService = di<UserService>(); // same as di.get<UserService>();
   /// ```
-  T call<T extends Object>() => get<T>();
+  T call<T extends Object>({String? name}) => get<T>(name: name);
 }

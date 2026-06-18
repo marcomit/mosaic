@@ -1,11 +1,11 @@
-/* 
+/*
 * BSD 3-Clause License
-* 
+*
 * Copyright (c) 2025, Marco Menegazzi
-* 
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 * 1. Redistributions of source code must retain the above copyright notice, this
 *   list of conditions and the following disclaimer.
 *
@@ -16,7 +16,7 @@
 * 3. Neither the name of the copyright holder nor the names of its
 *  contributors may be used to endorse or promote products derived from
 *  this software without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -29,27 +29,56 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mosaic/mosaic.dart';
 
-mixin Injectable {
-  final _di = DependencyInjector();
+void main() {
+  group('MosaicContainer scoping', () {
+    test('each container has independent subsystems', () {
+      final a = MosaicContainer();
+      final b = MosaicContainer();
+      expect(identical(a.events, b.events), isFalse);
+      expect(identical(a.registry, b.registry), isFalse);
+    });
 
-  T call<T extends Object>({String? name}) => _di<T>(name: name);
-  T get<T extends Object>({String? name}) => _di<T>(name: name);
-  Future<T> getAsync<T extends Object>({String? name}) =>
-      _di.getAsync<T>(name: name);
-  void put<T extends Object>(T instance, {String? name}) =>
-      _di.put(instance, name: name);
-  void factory<T extends Object>(T Function() builder, {String? name}) =>
-      _di.factory(builder, name: name);
-  void lazy<T extends Object>(T Function() builder, {String? name}) =>
-      _di.lazy(builder, name: name);
-  void putAsync<T extends Object>(Future<T> Function() builder, {String? name}) =>
-      _di.putAsync(builder, name: name);
-  void override<T extends Object>(T instance, {String? name}) =>
-      _di.override(instance, name: name);
-  bool contains<T extends Object>({String? name}) => _di.contains<T>(name: name);
+    test('reset rebuilds the subsystems', () {
+      final container = MosaicContainer();
+      final before = container.events;
+      container.reset();
+      expect(identical(container.events, before), isFalse);
+    });
 
-  void clear() => _di.clear();
-  void remove<T>({String? name}) => _di.remove<T>(name: name);
+    testWidgets('of() resolves the provided container', (tester) async {
+      final scoped = MosaicContainer();
+      late MosaicContainer resolved;
+
+      await tester.pumpWidget(
+        MosaicProvider(
+          container: scoped,
+          child: Builder(
+            builder: (context) {
+              resolved = MosaicContainer.of(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+
+      expect(identical(resolved, scoped), isTrue);
+    });
+
+    testWidgets('of() falls back to the root scope', (tester) async {
+      late MosaicContainer resolved;
+      await tester.pumpWidget(
+        Builder(
+          builder: (context) {
+            resolved = MosaicContainer.of(context);
+            return const SizedBox();
+          },
+        ),
+      );
+      expect(identical(resolved, mosaic), isTrue);
+    });
+  });
 }

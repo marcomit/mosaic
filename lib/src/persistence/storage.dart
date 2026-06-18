@@ -1,11 +1,11 @@
-/* 
+/*
 * BSD 3-Clause License
-* 
+*
 * Copyright (c) 2025, Marco Menegazzi
-* 
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 * 1. Redistributions of source code must retain the above copyright notice, this
 *   list of conditions and the following disclaimer.
 *
@@ -16,7 +16,7 @@
 * 3. Neither the name of the copyright holder nor the names of its
 *  contributors may be used to endorse or promote products derived from
 *  this software without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -29,27 +29,41 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-import 'package:mosaic/mosaic.dart';
+/// Pluggable key/value backend used by the persistence layer.
+///
+/// Values are stored as strings, so callers serialize/deserialize (typically to
+/// JSON). Implement this over `shared_preferences`, Hive, the file system, or a
+/// secure store and install it with `mosaic.override<MosaicStorage>(impl)`.
+///
+/// The default registration is [InMemoryStorage], which keeps Mosaic free of
+/// external dependencies and is handy for tests.
+abstract class MosaicStorage {
+  /// Returns the stored value for [key], or `null` if absent.
+  Future<String?> read(String key);
 
-mixin Injectable {
-  final _di = DependencyInjector();
+  /// Stores [value] under [key].
+  Future<void> write(String key, String value);
 
-  T call<T extends Object>({String? name}) => _di<T>(name: name);
-  T get<T extends Object>({String? name}) => _di<T>(name: name);
-  Future<T> getAsync<T extends Object>({String? name}) =>
-      _di.getAsync<T>(name: name);
-  void put<T extends Object>(T instance, {String? name}) =>
-      _di.put(instance, name: name);
-  void factory<T extends Object>(T Function() builder, {String? name}) =>
-      _di.factory(builder, name: name);
-  void lazy<T extends Object>(T Function() builder, {String? name}) =>
-      _di.lazy(builder, name: name);
-  void putAsync<T extends Object>(Future<T> Function() builder, {String? name}) =>
-      _di.putAsync(builder, name: name);
-  void override<T extends Object>(T instance, {String? name}) =>
-      _di.override(instance, name: name);
-  bool contains<T extends Object>({String? name}) => _di.contains<T>(name: name);
+  /// Removes the value stored under [key].
+  Future<void> delete(String key);
+}
 
-  void clear() => _di.clear();
-  void remove<T>({String? name}) => _di.remove<T>(name: name);
+/// In-memory [MosaicStorage] used by default and in tests.
+///
+/// Data does not survive an app restart; swap in a persistent implementation
+/// for production.
+class InMemoryStorage implements MosaicStorage {
+  final Map<String, String> _data = {};
+
+  /// Read-only view of the stored entries.
+  Map<String, String> get entries => Map.unmodifiable(_data);
+
+  @override
+  Future<String?> read(String key) async => _data[key];
+
+  @override
+  Future<void> write(String key, String value) async => _data[key] = value;
+
+  @override
+  Future<void> delete(String key) async => _data.remove(key);
 }

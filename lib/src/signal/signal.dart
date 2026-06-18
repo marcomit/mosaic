@@ -29,6 +29,8 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+import 'dart:async';
+
 import '../../exceptions.dart';
 
 typedef SignalCallback<T> = void Function(T);
@@ -107,8 +109,11 @@ class Signal<T> {
     for (final listener in _listeners.values) {
       try {
         listener(_state);
-      } catch (err) {
-        // Log error without blocking other listeners
+      } catch (err, stack) {
+        // Report the error without blocking the remaining listeners. Forwarding
+        // to the current zone keeps the failure visible (it reaches Flutter's
+        // error handler / test harness) instead of being silently swallowed.
+        Zone.current.handleUncaughtError(err, stack);
       }
     }
   }

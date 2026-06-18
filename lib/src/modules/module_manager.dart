@@ -431,6 +431,20 @@ class ModuleManager with Loggable {
     }
   }
 
+  /// Resumes a previously suspended module.
+  ///
+  /// No-op if the module is not currently suspended.
+  ///
+  /// **Parameters:**
+  /// * [name] - Name of the module to resume
+  Future<void> resumeModule(String name) async {
+    final module = _modules[name];
+    if (module != null && module.state == ModuleLifecycleState.suspended) {
+      await module.resume();
+      info('Resumed module $name');
+    }
+  }
+
   /// Disposes all modules and cleans up resources.
   Future<void> disposeAll() async {
     info('Disposing all modules');
