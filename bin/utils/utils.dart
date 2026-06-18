@@ -150,7 +150,11 @@ class Utils {
 
     while (curr.path != home) {
       accumulated = await visitor(accumulated, curr);
-      curr = curr.parent;
+      final parent = curr.parent;
+      // Stop at the filesystem root (its parent is itself) so projects outside
+      // the home directory don't loop forever.
+      if (parent.path == curr.path) break;
+      curr = parent;
     }
 
     return accumulated;

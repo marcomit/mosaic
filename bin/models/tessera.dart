@@ -42,6 +42,8 @@ class Tessera {
     required this.path,
     this.active = false,
     this.dependencies = const [],
+    this.lazy = false,
+    this.gate,
   });
 
   factory Tessera.fromJson(Map<String, dynamic> json, String path) {
@@ -57,6 +59,8 @@ class Tessera {
       json['name'] ?? '',
       active: json['active'] == true,
       dependencies: deps,
+      lazy: json['lazy'] == true,
+      gate: json['gate'] as String?,
       path: path,
     );
   }
@@ -107,10 +111,15 @@ class Tessera {
     return sorted;
   }
 
-  String get defaultConfig => '''name: $name
-active: true
-dependencies:
-''';
+  String get defaultConfig {
+    final buf = StringBuffer()
+      ..writeln('name: $name')
+      ..writeln('active: true');
+    if (lazy) buf.writeln('lazy: true');
+    if (gate != null) buf.writeln('gate: $gate');
+    buf.writeln('dependencies:');
+    return buf.toString();
+  }
 
   bool get canDelete => dependencies.isEmpty;
 
@@ -159,6 +168,14 @@ final module = ${capitalized}Module();
   final List<String> dependencies;
   bool active;
 
+  /// When true, the module is registered with `registerLazy` and only
+  /// constructed/initialized on first use (navigation, contract resolution, or
+  /// an explicit `load`).
+  final bool lazy;
+
+  /// Optional feature-flag key gating a [lazy] module's availability.
+  final String? gate;
+
   Future<void> createEntry() async {
     final file = File(utils.join([path, 'lib', '$name.dart']));
     await file.writeAsString(defaultEntry);
@@ -176,7 +193,13 @@ final module = ${capitalized}Module();
   }
 
   Map<String, dynamic> serialize() {
-    return {'name': name, 'active': active, 'dependencies': dependencies};
+    return {
+      'name': name,
+      'active': active,
+      if (lazy) 'lazy': true,
+      if (gate != null) 'gate': gate,
+      'dependencies': dependencies,
+    };
   }
 
   Future<void> enable(Context ctx) async {
@@ -195,8 +218,7 @@ final module = ${capitalized}Module();
     try {
       await tessera.delete(recursive: true);
     } catch (e) {
-      print('Error deleting tessera $name');
-      exit(1);
+      throw CliException('Error deleting tessera $name', cause: '$e');
     }
   }
 
@@ -207,8 +229,10 @@ final module = ${capitalized}Module();
         serialize(),
       );
     } catch (e) {
-      print('Error saving the configuration of tessera $name');
-      exit(1);
+      throw CliException(
+        'Error saving the configuration of tessera $name',
+        cause: '$e',
+      );
     }
   }
 
@@ -236,6 +260,18 @@ final module = ${capitalized}Module();
   }
 
   String generateInitialization() {
+    if (lazy) {
+      final depsList = dependencies.map((d) => "'$d'").join(', ');
+      final gateArg =
+          gate == null ? '' : "\n    gate: mosaic.features.gate('$gate'),";
+      return '''  mosaic.registry.registerLazy(
+    '$name',
+    () => $name.${name.capitalized}Module(),
+    dependencies: [$depsList],$gateArg
+  );
+''';
+    }
+
     final deps = dependencies
         .map((d) {
           return '  $name.module.dependencies.add($d.module);';

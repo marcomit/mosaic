@@ -736,6 +736,12 @@ mosaic init my_project
 # Show project status
 mosaic status
 
+# Diagnose the project (dangling/circular deps, missing entries, bad profiles)
+mosaic doctor
+
+# Print the CLI version
+mosaic version   # or: mosaic --version
+
 # List all modules
 mosaic tessera list
 ```
@@ -746,6 +752,12 @@ mosaic tessera list
 # Add new module
 mosaic tessera add user_profile
 
+# Add a LAZY module (constructed only on first use), optionally gated by a flag
+mosaic tessera add checkout --lazy --gate new_checkout
+
+# Remove a module (refused if others still depend on it)
+mosaic tessera remove old_feature
+
 # Enable/disable modules
 mosaic tessera enable user_profile
 mosaic tessera disable old_feature
@@ -753,6 +765,10 @@ mosaic tessera disable old_feature
 # Manage dependencies
 mosaic deps add user_profile authentication
 mosaic deps remove user_profile old_service
+
+# Run a command (or pub get) across packages, filtered by resolution
+mosaic walk "flutter test" --resolution tesserae
+mosaic tidy --resolution profile
 ```
 
 ### Profile System

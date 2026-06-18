@@ -40,6 +40,7 @@ import 'services/profile.dart';
 import 'config.dart';
 import 'enviroment.dart';
 import 'exception.dart';
+import 'version.dart';
 
 extension on Argv {
   Argv get validateConfig {
@@ -106,13 +107,20 @@ void setupProjectCommands(Argv app) {
     ..command(
       'tidy',
       description: 'Runs \'flutter pub get\' in all packages',
-    ).option(
-      'resolution',
-      abbr: 'r',
-      description: 'Filters packages',
-      defaultValue: 'global',
-      allowed: ['global', 'profile', 'tesserae'],
     )
+        .option(
+          'resolution',
+          abbr: 'r',
+          description: 'Filters packages',
+          defaultValue: 'global',
+          allowed: ['global', 'profile', 'tesserae'],
+        )
+        .check
+        .use<MosaicService>((m) => m.tidy)
+    ..command(
+      'doctor',
+      description: 'Diagnose project configuration and dependencies',
+    ).use<MosaicService>((m) => m.doctor)
     ..command('walk', description: 'Runs the command in all modules')
         .positional('command')
         .option(
@@ -137,9 +145,24 @@ void setupTesseraCommands(Argv app) {
   tessera.help
     ..command('add', description: 'Create a new tessera')
         .positional('name')
+        .flag(
+          'lazy',
+          abbr: 'l',
+          description: 'Register the tessera lazily (loaded on first use)',
+        )
+        .option(
+          'gate',
+          abbr: 'g',
+          description: 'Feature-flag key gating a lazy tessera',
+        )
         .on(require('name'))
         .check
         .use<TesseraService>((t) => t.add)
+    ..command('remove', description: 'Delete a tessera')
+        .positional('name')
+        .on(require('name'))
+        .check
+        .use<TesseraService>((t) => t.remove)
     ..command('enable', description: 'Enable a tessera')
         .positional('name')
         .on(require('name'))
@@ -269,9 +292,23 @@ void setupCodeGenerationCommands(Argv app) {
       .use<EventService>((e) => e.generate);
 }
 
+void setupVersionCommand(Argv app) {
+  app
+      .flag('version', abbr: 'v', description: 'Show the Mosaic CLI version')
+      .on((cli) {
+        if (cli.commands.isEmpty && cli.flag('version')) {
+          print('mosaic $mosaicCliVersion');
+        }
+      });
+  app
+      .command('version', description: 'Show the Mosaic CLI version')
+      .on((_) => print('mosaic $mosaicCliVersion'));
+}
+
 Argv setupCli() {
   final app = setupContext(Argv('mosaic', 'Modular architecture'));
 
+  setupVersionCommand(app);
   setupProjectCommands(app);
   setupTesseraCommands(app);
   setupDependencyCommands(app);

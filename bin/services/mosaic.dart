@@ -34,17 +34,56 @@ import 'package:argv/argv.dart';
 import 'package:path/path.dart' as p;
 
 import '../context.dart';
+import '../models/profile.dart';
+import '../models/tessera.dart';
 import '../utils/gesso.dart';
 import '../exception.dart';
 import '../utils/utils.dart';
 
 /// Mosaic in this case refers like the orchestrator of the tesserae
 class MosaicService {
+  /// Resolves the package directories targeted by a `--resolution` value:
+  /// * `global` (default) — every package in the project
+  /// * `tesserae` — only tessera packages
+  /// * `profile` — tesserae belonging to the current profile
+  Future<List<String>> _resolvePackagePaths(
+    Context ctx,
+    String resolution,
+  ) async {
+    switch (resolution) {
+      case 'tesserae':
+        return (await ctx.tesserae()).map((t) => t.path).toList();
+      case 'profile':
+        final current = ctx.config.get('profile');
+        final profiles = ctx.config.get('profiles') as Map? ?? {};
+        if (current == null || !profiles.containsKey(current)) {
+          throw const CliException('No current profile set');
+        }
+        final profile = Profile.parse(MapEntry(current, profiles[current]));
+        final all = await ctx.tesserae();
+        return all
+            .where((t) => profile.tesserae.contains(t.name))
+            .map((t) => t.path)
+            .toList();
+      case 'global':
+      default:
+        return (await ctx.env.getAllPackages()).values.toList();
+    }
+  }
+
   Future<void> tidy(ArgvResult cli) async {
     final ctx = cli.get<Context>();
-    await ctx.env.walkCmd(['flutter', 'pub', 'get']);
+    final resolution = cli.option('resolution') ?? 'global';
+    final paths = await _resolvePackagePaths(ctx, resolution);
 
-    print('✓ All tesserae organized successfully'.green);
+    print('');
+    for (final path in paths) {
+      print(utils.last(path).bold.green);
+      await utils.cmd(['flutter', 'pub', 'get'], path: path);
+    }
+
+    print('');
+    print('✓ Dependencies resolved across ${paths.length} package(s)'.green);
   }
 
   Future<void> run(ArgvResult cli) async {
@@ -142,26 +181,34 @@ class MosaicService {
   }
 
   Future<void> walk(ArgvResult cli) async {
-    final env = cli.get<Context>().env;
+    final ctx = cli.get<Context>();
 
     final command = cli.positional('command');
     if (command == null) throw ArgvException('Missing command to execute');
 
-    print('');
+    final resolution = cli.option('resolution') ?? 'global';
+    final paths = await _resolvePackagePaths(ctx, resolution);
+    final parsed = utils.parseCommand(command);
+    final out = cli.flag('output');
 
-    await env.walkCmd(utils.parseCommand(command), out: cli.flag('output'));
     print('');
-    print('✓ Command executed across tesserae'.green);
+    for (final path in paths) {
+      print(utils.last(path).bold.green);
+      await utils.cmd(parsed, path: path, out: out);
+      if (out) print('');
+    }
+
+    print('');
+    print('✓ Command executed across ${paths.length} package(s)'.green);
   }
 
   Future<void> list(ArgvResult cli) async {
     final ctx = cli.get<Context>();
-    final root = cli.positional('path');
     final showPath = cli.option('path');
 
     print('');
 
-    final existing = await ctx.tesserae(root);
+    final existing = await ctx.tesserae();
     final defaultModule = ctx.config.get('default');
 
     if (existing.isNotEmpty) {
@@ -239,5 +286,102 @@ class MosaicService {
           ' (${tesserae.where((t) => t.active).length} active)'.dim,
     );
     print('Profiles: '.dim + '${profiles.length}'.cyan);
+  }
+
+  /// Validates the project and reports problems: missing config, dangling or
+  /// circular dependencies, missing entry files, mis-configured gates, and
+  /// invalid profiles. Exits non-zero when issues are found.
+  Future<void> doctor(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    final issues = <String>[];
+    final warnings = <String>[];
+
+    void ok(String msg) => print('  ✓ '.green + msg.dim);
+    void fail(String msg) {
+      issues.add(msg);
+      print('  ✗ '.red + msg);
+    }
+
+    void warn(String msg) {
+      warnings.add(msg);
+      print('  ! '.yellow + msg);
+    }
+
+    print('');
+    print('Running diagnostics...'.bold.cyan);
+    print('');
+
+    if (!await ctx.env.isValid()) {
+      throw const CliException('Not inside a mosaic project');
+    }
+    await ctx.config.loadFromEnv();
+
+    if (ctx.config.get('name') == null) {
+      fail('mosaic.yaml is missing the "name" field');
+    } else {
+      ok('Project name present');
+    }
+
+    final defaultTessera = ctx.config.get('default');
+    final tesserae = (await ctx.tesserae()).toList();
+    final names = tesserae.map((t) => t.name).toSet();
+
+    // Dependencies reference existing tesserae.
+    for (final tessera in tesserae) {
+      for (final dep in tessera.dependencies) {
+        if (!names.contains(dep)) {
+          fail('Tessera "${tessera.name}" depends on missing "$dep"');
+        }
+      }
+      // Entry file exists.
+      final entry =
+          File(utils.join([tessera.path, 'lib', '${tessera.name}.dart']));
+      if (!entry.existsSync()) {
+        fail('Tessera "${tessera.name}" is missing lib/${tessera.name}.dart');
+      }
+      // A gate only makes sense for lazy tesserae.
+      if (tessera.gate != null && !tessera.lazy) {
+        warn('Tessera "${tessera.name}" sets a gate but is not lazy');
+      }
+    }
+    if (tesserae.isNotEmpty) ok('${tesserae.length} tessera(e) discovered');
+
+    // Cycle detection.
+    try {
+      Tessera.topologicalSort(tesserae);
+      ok('No circular dependencies');
+    } on CliException catch (e) {
+      fail(e.message);
+    }
+
+    // Default tessera exists.
+    if (defaultTessera != null && !names.contains(defaultTessera)) {
+      fail('Default tessera "$defaultTessera" does not exist');
+    }
+
+    // Profiles parse and reference existing tesserae.
+    final profiles = ctx.config.get('profiles') as Map? ?? {};
+    for (final entry in profiles.entries) {
+      try {
+        final profile = Profile.parse(entry);
+        for (final t in profile.tesserae) {
+          if (!names.contains(t)) {
+            fail('Profile "${profile.name}" references missing tessera "$t"');
+          }
+        }
+      } on CliException catch (e) {
+        fail('Profile "${entry.key}": ${e.message}');
+      }
+    }
+    if (profiles.isNotEmpty) ok('${profiles.length} profile(s) valid');
+
+    print('');
+    if (issues.isEmpty) {
+      print('✓ '.green + 'Everything looks healthy'.green +
+          (warnings.isEmpty ? '' : ' (${warnings.length} warning(s))'.dim));
+    } else {
+      print('✗ '.red + '${issues.length} issue(s) found'.red);
+      exit(1);
+    }
   }
 }

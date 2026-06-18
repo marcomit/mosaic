@@ -59,6 +59,8 @@ class TesseraService {
       name,
       path: utils.join([Directory.current.path, subname]),
       active: true,
+      lazy: cli.flag('lazy'),
+      gate: cli.option('gate'),
     );
 
     final code = await tessera.create();
@@ -96,6 +98,34 @@ class TesseraService {
 
   Future<void> enable(ArgvResult cli) => _toggleTessera(cli, true);
   Future<void> disable(ArgvResult cli) => _toggleTessera(cli, false);
+
+  Future<void> remove(ArgvResult cli) async {
+    final ctx = cli.get<Context>();
+    final name = cli.positional('name');
+    if (name == null) throw const CliException('Missing tessera name');
+
+    final tessera = await ctx.getTesseraFromName(name);
+    if (tessera == null) {
+      print('✗ '.red + 'Tessera '.dim + name.red + ' not found'.dim);
+      return;
+    }
+
+    // Refuse to orphan dependents.
+    final all = await ctx.tesserae();
+    final dependents = all
+        .where((t) => t.name != name && t.dependencies.contains(name))
+        .map((t) => t.name)
+        .toList();
+    if (dependents.isNotEmpty) {
+      throw CliException(
+        'Cannot remove tessera $name',
+        cause: 'still required by ${dependents.join(', ')}',
+      );
+    }
+
+    await tessera.delete(ctx);
+    print('✓ '.green + 'Tessera '.dim + name.cyan + ' removed'.dim);
+  }
 
   Future<void> depsAdd(ArgvResult cli) async {
     final ctx = cli.get<Context>();

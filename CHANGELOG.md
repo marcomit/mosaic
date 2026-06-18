@@ -61,22 +61,34 @@
 - Fixed bug 'nc'
 
 ## 1.1.0
-- Added lazy / dynamic module loading (`registry.registerLazy`, `load`, `ensureActive`) with depth-first lazy dependency resolution and cycle detection.
-- Modules are now loaded transparently when navigated to via `router.go`.
-- Introduced a reactive feature-flag store (`mosaic.features`) with local overrides and async remote resolvers; flags can gate lazy modules.
-- Introduced Module Contracts (`mosaic.contracts`): typed public APIs provided/revoked over the module lifecycle, with `requiredContracts` boundary enforcement and lazy provider auto-loading.
-- Fixed `ModuleManager.currentModule` setter throwing when cleared to `null`.
-- Fixed `DependencyInjector`: `lazy()` now caches the instance after first access (previously rebuilt on every `get`); `factory()`/`lazy()` doc comments corrected; `instances` now returns resolved objects instead of builder closures.
-- Fixed `Injectable.lazy` registering the builder closure as a singleton instead of a lazy dependency.
-- `Signal.notify` no longer silently swallows listener errors; they are forwarded to the current zone's error handler.
 
-## 1.2.0
-- **Communication guidance:** added a "choosing a communication primitive" guide and `MiddlewareContract`, which routes typed contract calls through the IMC middleware chain.
+A large feature and correctness release. All changes are backward-compatible.
+
+### Added
+- **Lazy / dynamic module loading:** `registry.registerLazy`, `load`, `ensureActive` with depth-first lazy dependency resolution and cycle detection. Modules load transparently when navigated to via `router.go`.
+- **Feature flags:** reactive `mosaic.features` store with local overrides and async remote resolvers; flags can gate lazy modules.
+- **Module Contracts:** `mosaic.contracts` — typed public APIs provided/revoked over the module lifecycle, with `requiredContracts` boundary enforcement and lazy provider auto-loading. `MiddlewareContract` routes typed contract calls through the IMC middleware chain.
 - **Scoped container:** `MosaicContainer` is now instantiable with `MosaicProvider` / `MosaicContainer.of(context)` and a `reset()` for test isolation; the global `mosaic` remains the default root scope.
 - **Navigator 2.0 routing (opt-in):** `MosaicRouterDelegate` + `MosaicRouteInformationParser` render the module history as real `Navigator` pages with URL/deep-link sync, system back, and transitions. `Module.fullScreen` now presents the page as a full-screen dialog.
-- **DI enhancements:** named/qualified bindings (`name:`), async providers (`putAsync`/`getAsync`).
+- **DI enhancements:** named/qualified bindings (`name:`) and async providers (`putAsync`/`getAsync`).
 - **State persistence:** `MosaicStorage` backend (default `InMemoryStorage`) + `Persistable` mixin with debounced save and rehydrate-on-init, built on signals.
 - **Runtime inspector:** `MosaicInspector` panel + `MosaicInspectorOverlay` showing module states, contracts, feature flags, and a live event log.
 - **Lifecycle policy:** `LifecyclePolicy` auto-suspends modules outside a recency window and suspends/resumes on app background/foreground; added `ModuleManager.resumeModule`.
 - **Typed event channels:** optional `EventChannel<T>` descriptors for compile-time-checked emit/listen, alongside the existing string API.
-- Removed a stale lint reference (`avoid_returning_null_for_future`) so the package analyzes clean.
+- A "choosing a communication primitive" guide (`doc/communication.md`).
+
+### CLI
+- `mosaic doctor` — diagnoses the project: dangling/circular dependencies, missing entry files, mis-configured gates, and invalid profiles.
+- `mosaic tessera remove <name>` — deletes a tessera (refuses if other tesserae still depend on it).
+- `mosaic tessera add` gained `--lazy` and `--gate <flag>`; the `init.dart` codegen now emits `registerLazy(...)` (with dependencies and an optional feature gate) for lazy tesserae and omits them from the eager init list.
+- `mosaic version` / `--version`.
+- `tidy` and `walk` now honor `--resolution` (global/profile/tesserae); `tidy` previously had no handler at all.
+
+### Fixed
+- `DependencyInjector`: `lazy()` now caches the instance after first access (previously rebuilt on every `get`); `factory()`/`lazy()` doc comments corrected; `instances` now returns resolved objects instead of builder closures.
+- `Injectable.lazy` registered the builder closure as a singleton instead of a lazy dependency.
+- `ModuleManager.currentModule` setter threw when cleared to `null`.
+- `Signal.notify` no longer silently swallows listener errors; they are forwarded to the current zone's error handler.
+- CLI: `utils.upward` no longer loops forever when run outside the home directory (now stops at the filesystem root).
+- CLI: `Tessera.save`/`delete` throw `CliException` instead of calling `exit()` from inside the model; `mosaic tessera list` reads the `--path` option instead of a nonexistent positional.
+- Removed a stale lint reference (`avoid_returning_null_for_future`, removed in Dart 3.3) so the package analyzes clean.

@@ -127,7 +127,9 @@ ${lines.map((l) => '// $l').join('\n')}
 
     buf.writeln('  await mosaic.registry.initialize($defaultTessera.module, [');
 
-    sorted.where((t) => t.active).forEach((t) {
+    // Lazy tesserae are registered above but not initialized eagerly; they
+    // come online on first use (navigation / contract resolution / load).
+    sorted.where((t) => t.active && !t.lazy).forEach((t) {
       buf.writeln('    ${t.name}.module,');
     });
     buf.writeln('    ...extras');
